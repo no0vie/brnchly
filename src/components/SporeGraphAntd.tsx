@@ -277,7 +277,6 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
                     y1={pos1.y + 60}
                     x2={pos2.x + 100}
                     y2={pos2.y + 60}
-                    stroke="#1890ff"
                     strokeWidth="2"
                     strokeDasharray="6,4"
                     className="connection-line-antd"
@@ -329,7 +328,6 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
               '0%': '#1890ff',
               '100%': '#722ed1',
             }}
-            trailColor="rgba(255,255,255,0.1)"
           />
           <div className="scroll-info">
             <Space split={<span>|</span>}>
