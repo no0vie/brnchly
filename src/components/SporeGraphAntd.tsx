@@ -134,9 +134,18 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
   const getItemPosition = (item: GraphItem, index: number) => {
     if (item.position) return item.position;
 
-    const spacing = scrollDirection === 'horizontal' ? 220 : 180;
-    const x = index * spacing;
-    const y = (item.dif + 10) * 15;
+    // Determine positioning based on scroll direction
+    if (scrollDirection === 'horizontal') {
+      const spacing = 220;
+      const x = index * spacing;
+      const y = (item.dif + 10) * 15;
+      return { x, y };
+    }
+    // vertical layout: stack items vertically with horizontal offset based on dif
+    const spacingV = 180;
+    const y = index * spacingV;
+    const baseX = 150;
+    const x = baseX + (item.dif + 10) * 15; // horizontal offset based on dif
     return { x, y };
   };
 
