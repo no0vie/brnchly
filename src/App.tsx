@@ -45,7 +45,7 @@ const App: React.FC = () => {
 
       <Content className="app-content">
         <div className="content-wrapper">
-          <Card className="controls-card" variant='borderless'>
+          <Card className="controls-card" style={{marginBottom: 16}} variant='borderless'>
             <Row gutter={[24, 16]} align="middle">
               <Col xs={24} sm={12} md={6}>
                 <Space>
