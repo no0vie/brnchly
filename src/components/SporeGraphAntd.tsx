@@ -5,12 +5,12 @@ import {
   PauseCircleOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons';
-import { GraphItem } from '../types';
+import { GraphItem, EvolutionStep } from '../types';
 import './SporeGraphAntd.css';
 
 interface SporeGraphProps {
   items: GraphItem[];
-  corner: string[];
+  corner: EvolutionStep[];
   scrollDirection?: 'horizontal' | 'vertical';
   autoScrollSpeed?: number;
 }
@@ -150,19 +150,23 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
   };
 
   const getCornerPositions = () => {
+    if (corner.length === 0) return [];
+
+    // Use the last item's offset as the max range for positioning
+    const maxOffset = corner[corner.length - 1].offset || 1;
     const containerWidth = containerRef.current?.clientWidth || 800;
 
     if (scrollDirection === 'horizontal') {
-      return corner.map((label, idx) => ({
-        label,
-        x: (idx * containerWidth * 0.6) + 50,
+      return corner.map((step, idx) => ({
+        ...step,
+        x: ((step.offset / maxOffset) * (containerWidth * 1.6)) + 50,
         y: Math.sin(idx * 0.7) * 60 + 100,
       }));
     } else {
-      return corner.map((label, idx) => ({
-        label,
+      return corner.map((step, idx) => ({
+        ...step,
         x: Math.cos(idx * 0.7) * 120 + 200,
-        y: idx * 160 + 50,
+        y: ((step.offset / maxOffset) * (validatedItems.length * 200)) + 50,
       }));
     }
   };
@@ -259,9 +263,11 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
                   transform: 'translate(-50%, -50%)',
                 }}
               >
-                <Tag color="cyan" className="corner-tag">
-                  {cornerItem.label}
-                </Tag>
+                <Tooltip title={cornerItem.description}>
+                  <Tag color="cyan" className="corner-tag">
+                    {cornerItem.name}
+                  </Tag>
+                </Tooltip>
               </div>
             ))}
 

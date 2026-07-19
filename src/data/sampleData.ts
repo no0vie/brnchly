@@ -1,4 +1,4 @@
-import { GraphItem } from '../types';
+import { GraphItem, EvolutionStep } from '../types';
 
 export const sampleItems: GraphItem[] = [
   {
@@ -39,12 +39,12 @@ export const sampleItems: GraphItem[] = [
   }
 ];
 
-export const evolutionTags = [
-  "Primordial",
-  "Simple",
-  "Complex",
-  "Intelligent",
-  "Galactic",
-  "Transcendent",
-  "Infinite"
+export const evolutionTags: EvolutionStep[] = [
+  { offset: 0, description: "Primordial stage of life", name: "Primordial" },
+  { offset: 500, description: "Simple multicellular organisms", name: "Simple" },
+  { offset: 1200, description: "Complex nervous systems", name: "Complex" },
+  { offset: 2000, description: "Tool use and language", name: "Intelligent" },
+  { offset: 3000, description: "Galactic civilization", name: "Galactic" },
+  { offset: 4000, description: "Reality manipulation", name: "Transcendent" },
+  { offset: 5000, description: "Infinite possibilities", name: "Infinite" },
 ];
