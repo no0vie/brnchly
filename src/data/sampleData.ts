@@ -39,7 +39,7 @@ export const sampleItems: GraphItem[] = [
   }
 ];
 
-export const evolutionTags: EvolutionStep[] = [
+export const defaultEvolutionSteps: EvolutionStep[] = [
   { offset: 0, description: "Primordial stage of life", name: "Primordial" },
   { offset: 500, description: "Simple multicellular organisms", name: "Simple" },
   { offset: 1200, description: "Complex nervous systems", name: "Complex" },
@@ -48,3 +48,5 @@ export const evolutionTags: EvolutionStep[] = [
   { offset: 4000, description: "Reality manipulation", name: "Transcendent" },
   { offset: 5000, description: "Infinite possibilities", name: "Infinite" },
 ];
+
+export const evolutionTags = defaultEvolutionSteps;

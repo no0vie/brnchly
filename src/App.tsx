@@ -1,18 +1,31 @@
 import React, { useState } from 'react';
-import { Layout, Typography, Space, Card, Row, Col, Select } from 'antd';
-import { ExperimentOutlined, ThunderboltOutlined, SwapOutlined } from '@ant-design/icons';
+import { Layout, Typography, Space, Card, Row, Col, Select, Button } from 'antd';
+import { ExperimentOutlined, ThunderboltOutlined, SwapOutlined, SettingOutlined } from '@ant-design/icons';
+import { observer } from 'mobx-react-lite';
 import SporeGraphAntd from './components/SporeGraphAntd';
-import { sampleItems, evolutionTags } from './data/sampleData';
+import { sampleItems } from './data/sampleData';
 import { useTheme } from './contexts/theme';
+import { EvolutionProvider } from './contexts/evolutionProvider';
+import { useEvolutionSteps } from './contexts/useEvolutionSteps';
 import './App.css';
 
 const { Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
 
-const App: React.FC = () => {
+const EvolutionEditTrigger: React.FC = observer(() => {
+  const { steps, toggleModal } = useEvolutionSteps();
+  return (
+    <Button icon={<SettingOutlined />} onClick={() => toggleModal(true)}>
+      Edit EvolutionSteps ({steps.length})
+    </Button>
+  );
+});
+
+const AppContent: React.FC = () => {
   const [direction, setDirection] = useState<'horizontal' | 'vertical'>('horizontal');
   const [speed, setSpeed] = useState<number>(35);
   const { theme, toggleTheme } = useTheme();
+  const { steps } = useEvolutionSteps();
 
   return (
     <Layout className="app-layout">
@@ -25,6 +38,7 @@ const App: React.FC = () => {
             </Title>
           </Space>
           <Space>
+            <EvolutionEditTrigger />
             <Text className="theme-label">Theme:</Text>
             <Select
               value={theme}
@@ -87,7 +101,7 @@ const App: React.FC = () => {
 
           <SporeGraphAntd
             items={sampleItems}
-            corner={evolutionTags}
+            corner={steps}
             scrollDirection={direction}
             autoScrollSpeed={speed}
           />
@@ -103,4 +117,10 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+const AppWrapper: React.FC = () => (
+  <EvolutionProvider>
+    <AppContent />
+  </EvolutionProvider>
+);
+
+export default AppWrapper;
