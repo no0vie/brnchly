@@ -152,21 +152,22 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
   const getCornerPositions = () => {
     if (corner.length === 0) return [];
 
-    // Use the last item's offset as the max range for positioning
-    const maxOffset = corner[corner.length - 1].offset || 1;
+    // Use array index for positioning — each item's position is determined by its current order in the array, not its offset value
+    // Items display their own original offset values as tags/labels regardless of position
+    const count = corner.length;
     const containerWidth = containerRef.current?.clientWidth || 800;
 
     if (scrollDirection === 'horizontal') {
       return corner.map((step, idx) => ({
         ...step,
-        x: ((step.offset / maxOffset) * (containerWidth * 1.6)) + 50,
+        x: ((idx / Math.max(count - 1, 1)) * (containerWidth * 1.6)) + 50,
         y: Math.sin(idx * 0.7) * 60 + 100,
       }));
     } else {
       return corner.map((step, idx) => ({
         ...step,
         x: Math.cos(idx * 0.7) * 120 + 200,
-        y: ((step.offset / maxOffset) * (validatedItems.length * 200)) + 50,
+        y: ((idx / Math.max(count - 1, 1)) * (count * 200)) + 50,
       }));
     }
   };
@@ -204,7 +205,7 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
   return (
     <Card
       className="spore-graph-antd-container"
-      bordered={false}
+      variant="borderless"
       bodyStyle={{ padding: '20px' }}
     >
       <Space direction="vertical" size="large" style={{ width: '100%' }}>

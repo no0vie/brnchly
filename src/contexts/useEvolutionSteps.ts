@@ -3,12 +3,14 @@ import evolutionStore from '../stores/evolutionStore';
 
 export interface EvolutionContextType {
   steps: typeof evolutionStore.steps;
+  version: number;
   modalOpen: boolean;
   toggleModal: (open: boolean) => void;
   addStep: typeof evolutionStore.addStep;
   updateStep: typeof evolutionStore.updateStep;
   removeStep: typeof evolutionStore.removeStep;
   resetToDefault: typeof evolutionStore.resetToDefault;
+  reorderSteps: typeof evolutionStore.reorder;
 }
 
 export const EvolutionContext = React.createContext<EvolutionContextType | null>(null);

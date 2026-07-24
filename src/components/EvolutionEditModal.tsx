@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { Modal, List, Button, Space, Popconfirm, Typography, Tag } from 'antd';
+import { observer } from 'mobx-react-lite';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, MeasuringStrategy } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { Modal, Button, Space, Popconfirm, Typography } from 'antd';
 import type { EvolutionStep } from '../types';
 import EvolutionFormModal, { StepFormValues } from './EvolutionFormModal';
+import { SortableListItem } from './Evolution/SortableListItem';
 
 interface Props {
   open: boolean;
@@ -11,14 +15,49 @@ interface Props {
   updateStep: (index: number, updated: Partial<EvolutionStep>) => void;
   removeStep: (index: number) => void;
   resetToDefault: () => void;
+  reorderSteps: (fromIndex: number, toIndex: number) => void;
 }
 
 type EditMode = 'create' | 'edit';
 
-const EvolutionEditModal: React.FC<Props> = ({ open, onClose, steps, addStep, updateStep, removeStep, resetToDefault }) => {
+const EvolutionEditModal: React.FC<Props> = observer(({ open, onClose, steps, addStep, updateStep, removeStep, resetToDefault, reorderSteps }) => {
   const [mode, setMode] = useState<EditMode>('create');
   const [formOpen, setFormOpen] = useState(false);
   const [targetIndex, setTargetIndex] = useState<number>(-1);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const handleDragEnd = (event: Parameters<NonNullable<React.ComponentProps<typeof DndContext>['onDragEnd']>>[0]) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    // Find the dragged element's original index in the array
+    const fromIndex = steps.findIndex((s) => s.name === active.id);
+    
+    // Use multiple strategies to find target drop index
+    let toIndex = -1;
+
+    // Strategy 1: use overData.index (most reliable for sortable lists)
+    const data = over.data as unknown as Record<string, unknown> | undefined;
+    const overIndex = data ? Number(data.index) : NaN;
+    if (!Number.isNaN(overIndex)) {
+      toIndex = overIndex;
+    }
+    
+    // Strategy 2: try matching by element ID
+    if (toIndex === -1 && steps.some((s) => s.name === over.id)) {
+      toIndex = steps.findIndex((s) => s.name === over.id);
+    }
+
+    // Validate indices
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    // Reorder and swap offsets
+    reorderSteps(fromIndex, toIndex);
+  };
 
   const openCreate = () => {
     setMode('create');
@@ -49,26 +88,29 @@ const EvolutionEditModal: React.FC<Props> = ({ open, onClose, steps, addStep, up
             <Typography.Text strong style={{ fontSize: 14, display: 'block', marginBottom: 8 }}>
               Steps ({steps.length})
             </Typography.Text>
-            <List
-              size="small"
-              dataSource={steps.map((s, i) => ({ ...s, _index: i }))}
-              locale={{ emptyText: 'No steps yet — click the button below to create one' }}
-              renderItem={(item: EvolutionStep & { _index: number }) => (
-                <List.Item style={{ justifyContent: 'space-between', alignItems: 'center', paddingBlock: '6px' }}>
-                  <Space size={8}>
-                    <Tag color="blue">{item.offset}</Tag>
-                    <Typography.Text strong>{item.name}</Typography.Text>
-                    <Typography.Text type="secondary" style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }}>
-                      {item.description}
-                    </Typography.Text>
-                  </Space>
-                  <Popconfirm title="Remove this step?" onConfirm={() => removeStep(item._index)} okText="Yes" cancelText="No">
-                    <Button danger size="small">Delete</Button>
-                  </Popconfirm>
-                  <Button size="small" onClick={() => openEdit(item._index)}>Edit</Button>
-                </List.Item>
-              )}
-            />
+
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              measuring={{
+                droppable: { strategy: MeasuringStrategy.Always },
+              }}
+            >
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                <SortableContext items={steps.map((s) => s.name)} strategy={verticalListSortingStrategy}>
+                  {steps.length === 0 ? (
+                    <span style={{ display: 'block', textAlign: 'center', padding: '24px 0', color: '#999' }}>
+                      No steps yet — click the button below to create one
+                    </span>
+                  ) : (
+                    steps.map((item, index) => (
+                      <SortableListItem key={item.name} id={item.name} step={item} index={index} onEdit={openEdit} onDelete={removeStep} />
+                    ))
+                  )}
+                </SortableContext>
+              </ul>
+            </DndContext>
           </div>
 
           {/* Single create button */}
@@ -106,6 +148,6 @@ const EvolutionEditModal: React.FC<Props> = ({ open, onClose, steps, addStep, up
       />
     </>
   );
-};
+});
 
 export default EvolutionEditModal;

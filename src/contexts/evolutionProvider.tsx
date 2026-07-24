@@ -10,12 +10,14 @@ export const EvolutionProvider: React.FC<{ children: React.ReactNode }> = observ
   return (
     <EvolutionContext.Provider value={{
       steps: evolutionStore.getSteps(),
+      version: evolutionStore.version,
       modalOpen,
       toggleModal: setModalOpen,
       addStep: evolutionStore.addStep.bind(evolutionStore),
       updateStep: evolutionStore.updateStep.bind(evolutionStore),
       removeStep: evolutionStore.removeStep.bind(evolutionStore),
       resetToDefault: evolutionStore.resetToDefault.bind(evolutionStore),
+      reorderSteps: evolutionStore.reorder.bind(evolutionStore),
     }}>
       {children}
       <EvolutionEditModal
@@ -26,6 +28,7 @@ export const EvolutionProvider: React.FC<{ children: React.ReactNode }> = observ
         updateStep={evolutionStore.updateStep.bind(evolutionStore)}
         removeStep={evolutionStore.removeStep.bind(evolutionStore)}
         resetToDefault={evolutionStore.resetToDefault.bind(evolutionStore)}
+        reorderSteps={evolutionStore.reorder.bind(evolutionStore)}
       />
     </EvolutionContext.Provider>
   );
