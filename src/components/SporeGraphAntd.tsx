@@ -13,6 +13,8 @@ interface SporeGraphProps {
   corner: EvolutionStep[];
   scrollDirection?: 'horizontal' | 'vertical';
   autoScrollSpeed?: number;
+  autoPlay?: boolean;
+  onItemClick?: (index: number) => void;
 }
 
 const SporeGraphAntd: React.FC<SporeGraphProps> = ({
@@ -20,9 +22,11 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
   corner,
   scrollDirection = 'horizontal',
   autoScrollSpeed = 35,
+  autoPlay = true,
+  onItemClick,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(autoPlay);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
   const animationRef = useRef<number>();
@@ -306,6 +310,15 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
                   hoverable
                   size="small"
                   bodyStyle={{ padding: '12px' }}
+                  role={onItemClick ? 'button' : undefined}
+                  tabIndex={onItemClick ? 0 : undefined}
+                  onClick={() => onItemClick?.(index)}
+                  onKeyDown={(event) => {
+                    if (onItemClick && (event.key === 'Enter' || event.key === ' ')) {
+                      event.preventDefault();
+                      onItemClick(index);
+                    }
+                  }}
                 >
                   <div className="node-glow-antd" />
                   <div className="node-content-antd">

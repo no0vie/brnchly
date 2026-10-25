@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Layout, Typography, Space, Card, Row, Col, Select, Button } from 'antd';
 import { ExperimentOutlined, ThunderboltOutlined, SwapOutlined, SettingOutlined } from '@ant-design/icons';
 import { observer } from 'mobx-react-lite';
-import SporeGraphAntd from './components/SporeGraphAntd';
+import { EvolutionGraphView } from './renderer';
+import { migrateLegacyEvolutionData } from './domain/evolutionGraph';
 import { sampleItems } from './data/sampleData';
 import { useTheme } from './contexts/theme';
 import { EvolutionProvider } from './contexts/evolutionProvider';
@@ -26,6 +27,10 @@ const AppContent: React.FC = () => {
   const [speed, setSpeed] = useState<number>(35);
   const { theme, toggleTheme } = useTheme();
   const { steps } = useEvolutionSteps();
+  const graph = useMemo(
+    () => migrateLegacyEvolutionData(sampleItems, steps, { id: 'spore-career-track', title: 'Evolution Graph' }),
+    [steps],
+  );
 
   return (
     <Layout className="app-layout">
@@ -99,10 +104,13 @@ const AppContent: React.FC = () => {
             </Row>
           </Card>
 
-          <SporeGraphAntd
-            items={sampleItems}
-            corner={steps}
-            scrollDirection={direction}
+          <EvolutionGraphView
+            graph={graph}
+            mode="classic"
+            readonly
+            theme={theme}
+            autoplay
+            direction={direction}
             autoScrollSpeed={speed}
           />
         </div>
