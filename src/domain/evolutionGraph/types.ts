@@ -1,4 +1,4 @@
-export const CURRENT_EVOLUTION_GRAPH_SCHEMA_VERSION = 1 as const;
+export const CURRENT_EVOLUTION_GRAPH_SCHEMA_VERSION = 2 as const;
 
 export type NodeStatus = "locked" | "available" | "acquired" | "mastered";
 export type EvolutionEdgeType = "dependency" | "evolution" | "related";
@@ -26,6 +26,8 @@ export interface EvolutionNode {
   evidence?: EvolutionEvidence[];
   position?: Position;
   metadata?: Record<string, unknown>;
+  stageId?: string;
+  laneId?: string;
 }
 
 export interface EvolutionBranch {
@@ -33,6 +35,20 @@ export interface EvolutionBranch {
   title: string;
   color: string;
   description?: string;
+}
+
+export interface GraphStage {
+  id: string;
+  title: string;
+  order: number;
+  description?: string;
+}
+
+export interface GraphLane {
+  id: string;
+  title: string;
+  coordinate: number;
+  color?: string;
 }
 
 export interface EvolutionEdge {
@@ -53,13 +69,18 @@ export interface EvolutionGraphMetadata {
   [key: string]: unknown;
 }
 
+/** Schema 1 remains accepted at TypeScript call sites; imports and serialization upgrade it to v2. */
 export interface EvolutionGraph {
-  schemaVersion: typeof CURRENT_EVOLUTION_GRAPH_SCHEMA_VERSION;
+  schemaVersion: 1 | typeof CURRENT_EVOLUTION_GRAPH_SCHEMA_VERSION;
   id: string;
   title: string;
   description?: string;
   branches: EvolutionBranch[];
+  stages?: GraphStage[];
+  lanes?: GraphLane[];
   nodes: EvolutionNode[];
   edges: EvolutionEdge[];
   metadata?: EvolutionGraphMetadata;
 }
+
+export type EvolutionGraphV2 = EvolutionGraph & { schemaVersion: 2 };

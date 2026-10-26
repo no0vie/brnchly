@@ -1,96 +1,172 @@
-# brnchly — Evolution Graph
+# brnchly — Universal Evolution Graph Engine
 
-Интерактивный редактор и renderer эволюционных графов. Проект развивается поэтапно из визуализатора карьерного трека в универсальный инструмент для skill trees, технологических деревьев и временных эволюционных графов.
+`brnchly` — open-source React/TypeScript renderer for arbitrary interactive evolution graphs. The core knows only about branches, stages, lanes, nodes, and typed edges; it contains no resume, career, company, or skill-event business model.
 
-## Текущий статус
+## Status
 
-**Evolution Graph 2.0 — Phase 1 (Architecture) завершена.**
+**Evolution Graph 2.0 — Phase 2 complete.**
 
-Существующий Classic UI сохранён. Поверх него добавлены версионируемая доменная модель, runtime-валидация, миграции, JSON codec и независимая от editor/store граница renderer.
+- React 18, TypeScript strict, Vite, Ant Design.
+- Versioned universal graph schema with runtime validation and migration.
+- Pure layout and viewport engines independent from React.
+- Interactive Graph Mode plus backward-compatible Classic Mode.
+- Dark/light themes and three selectable demos.
 
-## Результаты аудита исходной версии
-
-- Приложение — React 18 + TypeScript strict + Vite, UI построен на Ant Design.
-- MobX `EvolutionStore` управляет только массивом `EvolutionStep[]`; состояние modal частично дублировалось в provider.
-- Визуальные узлы хранились отдельно как статический `GraphItem[]`.
-- Связи не были предметными данными: renderer рисовал линию между соседними элементами массива.
-- Идентификаторами DnD фактически служили имена этапов, поэтому они не гарантировали стабильность/уникальность.
-- Ручные координаты поддерживались для `GraphItem`, а автоматические позиции рассчитывались внутри React-компонента.
-- Уже существовали и переиспользованы: horizontal/vertical отображение, auto-scroll, pause/resume, speed control, hover details, dark/light theme, CRUD и keyboard DnD для evolution steps.
-- Сохранения графа, import/export, undo/redo, веток, типизированных рёбер и проверки циклов не было. `localStorage` использовался только для темы.
-- Renderer принимал данные через props, но его legacy-типы и расположение рядом с editor-компонентами не формировали публичную embeddable-границу.
-
-## Архитектура Phase 1
+## Architecture
 
 ```text
 src/
-├── domain/evolutionGraph/     # Чистая предметная модель, validation, migrations, JSON codec
-├── renderer/                  # Store-независимый публичный renderer API
-├── stores/                    # Существующее editor state (MobX)
-├── components/                # Существующий Classic UI и editor modals
-└── data/                      # Legacy demo data
+├── domain/evolutionGraph/  # Schema, validation, migrations, JSON codec
+├── layout/                 # Pure deterministic layout strategies
+├── viewport/               # Pure camera/coordinate math
+├── renderer/               # Embeddable Classic and Graph renderers
+├── data/                   # Universal demo configurations
+├── stores/, contexts/      # Legacy Classic editor state
+└── components/             # Classic UI and editor components
+docs/adr/                   # Architecture decisions
 ```
 
-### Предметные данные
+Layout is calculated from graph data only. The React renderer memoizes it. Hover, node selection, pan, zoom, fit, and focus update presentation/camera state without recalculating node positions.
 
-`EvolutionGraph` содержит:
+## Universal Graph Model
 
-- `schemaVersion`, стабильные `id`, `title`;
-- независимые `branches`, `nodes`, `edges`;
-- статусы `locked | available | acquired | mastered`;
-- связи `dependency | evolution | related`;
-- optional evidence, level, acquired timestamp и ручную position;
-- extension metadata для lossless migration legacy-полей.
+Schema version `2` adds optional stages and lanes while preserving all Phase 1 properties.
 
-Визуальные параметры отделены в `EvolutionViewSettings`: mode, theme, layout, autoplay, playback speed и active branch.
+```ts
+interface GraphStage {
+  id: string;
+  title: string;
+  order: number;
+  description?: string;
+}
 
-### Инварианты
+interface GraphLane {
+  id: string;
+  title: string;
+  coordinate: number;
+  color?: string;
+}
 
-`validateEvolutionGraph` проверяет:
+interface EvolutionNode {
+  id: string;
+  title: string;
+  branchId: string;
+  status: "locked" | "available" | "acquired" | "mastered";
+  stageId?: string;
+  laneId?: string;
+  // description, icon, level, evidence, position, metadata...
+}
+```
 
-- форму header/collections и допустимые enum-значения;
-- уникальность branch/node/edge ID;
-- ссылки node → branch и edge → source/target nodes;
-- self-dependency;
-- циклы только в `dependency`-подграфе.
+`EvolutionGraph` contains `branches`, optional `stages`/`lanes`, `nodes`, and `edges`. Edge types are:
 
-Перекрёстные зависимости между ветками разрешены.
+- `dependency` — directed prerequisite;
+- `evolution` — directed progression;
+- `related` — visually undirected association and excluded from DAG ordering.
 
-### Миграции и JSON
+### Validation policy
 
-- Текущая schema version: `1`.
-- `migrateLegacyEvolutionData(items, steps)` детерминированно преобразует исходные `GraphItem[] + EvolutionStep[]`, сохраняя тексты, порядок, difficulty, offsets и ручные координаты.
-- `migrateEvolutionGraph` обновляет schema v0 до v1 и отклоняет неизвестные будущие версии.
-- `serializeEvolutionGraph` валидирует данные до export.
-- `parseEvolutionGraph` оборачивает malformed JSON, ошибки миграции и ошибки модели в `EvolutionGraphImportError` с понятным сообщением.
+`validateEvolutionGraph` checks collection shapes, enums, references, unique IDs, stage orders, and lane coordinates. Duplicate lane coordinates are explicitly rejected. If a node uses Stage/Lane placement, both `stageId` and `laneId` must be supplied and reference existing entries. Dependency cycles remain invalid domain data; the layout engine still has a deterministic cycle fallback for unvalidated callers.
 
-## Embeddable renderer API
+## Layout engine
 
-Renderer не импортирует MobX stores, editor context или глобальное состояние:
+```ts
+import { layoutGraph } from "./layout";
+
+const result = layoutGraph(graph, {
+  strategy: "stage-lane",
+  nodeSize: { width: 176, height: 88 },
+});
+```
+
+`LayoutResult` exposes `positions`, complete `bounds`, `nodeSize`, and `regions` used by headers, labels, and camera focus.
+
+Supported strategies:
+
+- `stage-lane` — stages left-to-right by `order`, lanes top-to-bottom by numeric `coordinate`; dynamic cell sizing and deterministic multi-node packing;
+- `horizontal-dag` — dependency/evolution flow left-to-right;
+- `vertical-dag` — dependency/evolution flow top-to-bottom;
+- `radial` (`radial-tree` compatibility alias) — deterministic circular placement;
+- `manual` — stored node positions, with deterministic fallback for missing coordinates.
+
+The engine handles empty/single graphs, multiple roots and parents, disconnected components, non-contiguous and negative lane coordinates, cross-stage/cross-lane edges, and cyclic input without hanging.
+
+## Graph Mode
+
+Graph Mode uses accessible HTML node cards and an SVG geometry layer.
+
+- title, description, icon, status, and lane/branch color;
+- click and keyboard activation with details panel;
+- multiple incoming/outgoing edges;
+- distinct dependency, evolution, and related styles;
+- selectable layout, stage, and lane;
+- edge legend and optional lane labels;
+- stage headers and lane labels synchronized to the camera.
+
+Stage headers and lane labels are overlays, not graph nodes. Selecting one focuses its layout region.
+
+## Viewport
+
+The pure `src/viewport` API includes:
+
+- `fitBounds`, `focusStage`, `focusLane`;
+- `panViewport`, `zoomAt`, `clampZoom`;
+- `worldToScreen`, `screenToWorld`;
+- `resizeViewport` and `createViewport`.
+
+The renderer supports drag pan, cursor-relative wheel zoom, touch pan/pinch, zoom limits, fit-to-view, reset, and focus. Stage/Lane opens with fit-to-view and a readable minimum scale. `GraphRendererHandle` exposes `fitToView`, `resetView`, `focusStage`, `focusLane`, `setCamera`, and `getCamera` for embedding and future camera animation.
+
+## Renderer API
 
 ```tsx
-import { EvolutionGraphView } from './renderer';
+import { EvolutionGraphView } from "./renderer";
 
 <EvolutionGraphView
   graph={graph}
-  mode="classic"
-  readonly
+  mode="graph"
+  layout="stage-lane"
   theme="dark"
-  autoplay={false}
+  readonly
+  showLaneLabels
+  onLayoutChange={setLayout}
   onNodeClick={(node) => console.log(node.id)}
-/>
+/>;
 ```
 
-В Phase 1 все данные проходят через новый контракт, а Classic Mode использует адаптер к существующему UI. Интерактивные карточки доступны с клавиатуры (`Enter`/`Space`) при наличии `onNodeClick`.
+Use `mode="classic"` for the Phase 1 scrolling renderer. Its adapter and editor remain available.
 
-## Запуск
+## Import/export and compatibility
+
+```ts
+import { parseEvolutionGraph, serializeEvolutionGraph } from "./domain/evolutionGraph";
+
+const json = serializeEvolutionGraph(graph);
+const restored = parseEvolutionGraph(json);
+```
+
+- Schema v0 and v1 imports migrate deterministically to v2.
+- Existing v1 TypeScript call sites remain accepted and serialization upgrades their payload.
+- Unknown future schema versions and invalid references produce actionable import errors.
+- Legacy `GraphItem[] + EvolutionStep[]` migration and Classic adapter remain supported.
+
+## Demo configurations
+
+The UI exposes:
+
+1. **Three-Lane Evolution** — four stages, coordinates `-1/0/1`, multiple nodes per cell, cross-stage/lane edges.
+2. **Technology Evolution** — Foundation, Development, Expansion, Advanced across Interface, Systems, Infrastructure.
+3. **Free Graph** — ordinary disconnected DAG with no Stage/Lane semantics.
+
+These are example data only and are not part of core behavior.
+
+## Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Проверки:
+Quality gates:
 
 ```bash
 npm test
@@ -98,39 +174,36 @@ npm run lint
 npm run build
 ```
 
-TypeScript работает в strict mode.
+Phase 2 currently has 31 unit tests covering domain validation/migration/serialization, all layouts (including deterministic 150-node DAG and multi-node Stage/Lane overlap checks), viewport fit/zoom/transforms/focus/resize, and Classic adapter regression.
 
-## Следующие фазы
+## Current limitations
 
-### Phase 2 — Graph Engine
+- Edge routing uses smooth cubic paths but does not perform obstacle avoidance or edge bundling.
+- Nodes are not draggable/editable in Graph Mode; full CRUD belongs to Phase 4.
+- No virtualization. The tested target is 100+ nodes; larger datasets should be profiled before choosing Canvas/WebGL.
+- No playback or complex camera/node animation.
+- Stage order and lane coordinate collisions are rejected rather than automatically resolved.
+- Ant Design remains the largest production chunk; code splitting is future optimization work.
 
-- layout abstraction: horizontal/vertical DAG, radial tree, manual;
-- deterministic layout tests и поддержка нескольких родителей;
-- полноценный canvas pan/zoom/fit-to-view;
-- branches и typed edges в UI.
+See [ADR 0001](docs/adr/0001-layout-engine-and-renderer.md) for renderer/layout trade-offs.
+
+## Roadmap
 
 ### Phase 3 — Evolution Experience
 
-- отдельные Evolution и Skill Tree modes;
-- staged playback, animated edges/nodes и reduced-motion;
-- branch focus и dependency highlighting.
+- staged playback and reduced-motion support;
+- dependency/branch focus and traversal highlighting;
+- animated camera transitions through the existing camera API;
+- improved edge routing and graph navigation.
 
 ### Phase 4 — Editor
 
-- CRUD branches/nodes/edges;
-- graph-level drag & drop, undo/redo;
-- import/export UI, localStorage autosave и validation feedback.
+- CRUD for stages, lanes, nodes, and edges;
+- graph drag/drop, manual positioning, undo/redo;
+- import/export UI, autosave, and validation feedback.
 
 ### Phase 5 — Integration Readiness
 
-- Developer Evolution demo dataset;
-- read-only integration examples;
-- подготовка package boundary.
-
-## Оставшиеся риски после Phase 1
-
-- Legacy editor пока изменяет только evolution steps; полноценное редактирование новой модели относится к Phase 4.
-- Classic renderer визуализирует узлы последовательно и не показывает произвольные typed edges/branches — это задача Phase 2.
-- Данные графа пока не сохраняются в `localStorage`; сохранение темы осталось без изменений.
-- Нет layout/performance тестов для 100+ nodes до появления Graph Engine.
-- Production bundle Ant Design превышает 500 kB; code splitting не входил в Phase 1.
+- package boundary and framework integration examples;
+- renderer performance profiling and optional virtualization;
+- accessibility audit and stable public API preparation.

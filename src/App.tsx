@@ -1,14 +1,19 @@
-import React, { useMemo, useState } from 'react';
-import { Layout, Typography, Space, Card, Row, Col, Select, Button } from 'antd';
-import { ExperimentOutlined, ThunderboltOutlined, SwapOutlined, SettingOutlined } from '@ant-design/icons';
-import { observer } from 'mobx-react-lite';
-import { EvolutionGraphView } from './renderer';
-import { migrateLegacyEvolutionData } from './domain/evolutionGraph';
-import { sampleItems } from './data/sampleData';
-import { useTheme } from './contexts/theme';
-import { EvolutionProvider } from './contexts/evolutionProvider';
-import { useEvolutionSteps } from './contexts/useEvolutionSteps';
-import './App.css';
+import React, { useMemo, useState } from "react";
+import { Layout, Typography, Space, Card, Select, Button, Segmented, Switch } from "antd";
+import { ExperimentOutlined, SwapOutlined, SettingOutlined } from "@ant-design/icons";
+import { observer } from "mobx-react-lite";
+import { EvolutionGraphView } from "./renderer";
+import {
+  migrateLegacyEvolutionData,
+  type EvolutionGraphMode,
+  type EvolutionLayoutStrategy,
+} from "./domain/evolutionGraph";
+import { sampleItems } from "./data/sampleData";
+import { demoGraphs } from "./data/demoGraphs";
+import { useTheme } from "./contexts/theme";
+import { EvolutionProvider } from "./contexts/evolutionProvider";
+import { useEvolutionSteps } from "./contexts/useEvolutionSteps";
+import "./App.css";
 
 const { Header, Content, Footer } = Layout;
 const { Title, Text } = Typography;
@@ -23,39 +28,55 @@ const EvolutionEditTrigger: React.FC = observer(() => {
 });
 
 const AppContent: React.FC = () => {
-  const [direction, setDirection] = useState<'horizontal' | 'vertical'>('horizontal');
-  const [speed, setSpeed] = useState<number>(35);
   const { theme, toggleTheme } = useTheme();
   const { steps } = useEvolutionSteps();
-  const graph = useMemo(
-    () => migrateLegacyEvolutionData(sampleItems, steps, { id: 'spore-career-track', title: 'Evolution Graph' }),
+  const classicGraph = useMemo(
+    () => migrateLegacyEvolutionData(sampleItems, steps, { id: "classic-evolution", title: "Classic Evolution Graph" }),
     [steps],
   );
+  const [mode, setMode] = useState<EvolutionGraphMode>("graph");
+  const [demoId, setDemoId] = useState(demoGraphs[0].id);
+  const selectedDemo = demoGraphs.find((demo) => demo.id === demoId) ?? demoGraphs[0];
+  const graph = mode === "classic" ? classicGraph : selectedDemo;
+  const defaultLayout: EvolutionLayoutStrategy = selectedDemo.stages?.length ? "stage-lane" : "horizontal-dag";
+  const [layouts, setLayouts] = useState<Record<string, EvolutionLayoutStrategy>>({});
+  const layout = layouts[selectedDemo.id] ?? defaultLayout;
+  const [showLaneLabels, setShowLaneLabels] = useState(true);
 
   return (
     <Layout className="app-layout">
       <Header className="app-header">
         <div className="header-content">
-          <Space size="large">
-            <ExperimentOutlined style={{ fontSize: '28px' }} />
+          <Space size="middle">
+            <ExperimentOutlined className="header-icon" />
             <Title level={3} style={{ margin: 0 }}>
-              Evolution Graph
+              brnchly
             </Title>
           </Space>
           <Space>
-            <EvolutionEditTrigger />
-            <Text className="theme-label">Theme:</Text>
+            {mode === "classic" && <EvolutionEditTrigger />}
             <Select
               value={theme}
               onChange={() => toggleTheme()}
-              style={{ width: 120 }}
+              aria-label="Theme"
+              style={{ width: 112 }}
               options={[
-                { value: 'light', label: (
-                  <span><SwapOutlined /> Light</span>
-                )},
-                { value: 'dark', label: (
-                  <span><SwapOutlined /> Dark</span>
-                )},
+                {
+                  value: "light",
+                  label: (
+                    <span>
+                      <SwapOutlined /> Light
+                    </span>
+                  ),
+                },
+                {
+                  value: "dark",
+                  label: (
+                    <span>
+                      <SwapOutlined /> Dark
+                    </span>
+                  ),
+                },
               ]}
             />
           </Space>
@@ -64,62 +85,63 @@ const AppContent: React.FC = () => {
 
       <Content className="app-content">
         <div className="content-wrapper">
-          <Card className="controls-card" style={{marginBottom: 16}} variant='borderless'>
-            <Row gutter={[24, 16]} align="middle">
-              <Col xs={24} sm={12} md={6}>
-                <Space>
-                  <ThunderboltOutlined />
-                  <Text>Direction:</Text>
+          <Card className="controls-card" variant="borderless">
+            <div className="phase-controls">
+              <Segmented
+                value={mode}
+                onChange={(value) => setMode(value as EvolutionGraphMode)}
+                options={[
+                  { value: "classic", label: "Classic Mode" },
+                  { value: "graph", label: "Graph Mode" },
+                ]}
+              />
+              {mode === "graph" ? (
+                <>
                   <Select
-                    value={direction}
-                    onChange={(value) => setDirection(value)}
-                    style={{ width: 120 }}
-                    options={[
-                      { value: 'horizontal', label: '↔ Horizontal' },
-                      { value: 'vertical', label: '↕ Vertical' },
-                    ]}
+                    value={demoId}
+                    onChange={setDemoId}
+                    aria-label="Demo graph"
+                    options={demoGraphs.map((demo) => ({ value: demo.id, label: demo.title }))}
+                    style={{ minWidth: 210 }}
                   />
-                </Space>
-              </Col>
-              <Col xs={24} sm={12} md={6}>
-                <Space>
-                  <Text>Speed:</Text>
-                  <Select
-                    value={speed}
-                    onChange={(value) => setSpeed(value)}
-                    style={{ width: 100 }}
-                    options={[
-                      { value: 20, label: 'Slow' },
-                      { value: 35, label: 'Medium' },
-                      { value: 50, label: 'Fast' },
-                    ]}
-                  />
-                </Space>
-              </Col>
-              <Col xs={24} md={12}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  💡 Hover over nodes to see details • Auto-scroll pauses on hover
+                  {layout === "stage-lane" && (
+                    <Space size="small">
+                      <Text type="secondary">Lane labels</Text>
+                      <Switch
+                        aria-label="Show lane labels"
+                        size="small"
+                        checked={showLaneLabels}
+                        onChange={setShowLaneLabels}
+                      />
+                    </Space>
+                  )}
+                  <Text type="secondary" className="mode-description">
+                    Drag to pan · Wheel or pinch to zoom · Select a node for details
+                  </Text>
+                </>
+              ) : (
+                <Text type="secondary" className="mode-description">
+                  Phase 1 UI remains available with its original scrolling and editor.
                 </Text>
-              </Col>
-            </Row>
+              )}
+            </div>
           </Card>
 
           <EvolutionGraphView
             graph={graph}
-            mode="classic"
+            mode={mode}
             readonly
             theme={theme}
-            autoplay
-            direction={direction}
-            autoScrollSpeed={speed}
+            autoplay={mode === "classic"}
+            layout={layout}
+            showLaneLabels={showLaneLabels}
+            onLayoutChange={(next) => setLayouts((current) => ({ ...current, [selectedDemo.id]: next }))}
           />
         </div>
       </Content>
 
       <Footer className="app-footer">
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          Inspired by Spore™ Evolution Game • Built with React + Ant Design
-        </Text>
+        <Text type="secondary">Universal Evolution Graph Engine · React + TypeScript</Text>
       </Footer>
     </Layout>
   );
@@ -130,5 +152,4 @@ const AppWrapper: React.FC = () => (
     <AppContent />
   </EvolutionProvider>
 );
-
 export default AppWrapper;
