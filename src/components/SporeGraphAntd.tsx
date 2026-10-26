@@ -1,17 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Progress, Card, Space, Tag, Tooltip, Badge } from 'antd';
-import {
-  ReloadOutlined,
-  PauseCircleOutlined,
-  PlayCircleOutlined,
-} from '@ant-design/icons';
-import { GraphItem, EvolutionStep } from '../types';
-import './SporeGraphAntd.css';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Button, Progress, Card, Space, Tag, Tooltip, Badge } from "antd";
+import { ReloadOutlined, PauseCircleOutlined, PlayCircleOutlined } from "@ant-design/icons";
+import { GraphItem, EvolutionStep } from "../types";
+import "./SporeGraphAntd.css";
 
 interface SporeGraphProps {
   items: GraphItem[];
   corner: EvolutionStep[];
-  scrollDirection?: 'horizontal' | 'vertical';
+  scrollDirection?: "horizontal" | "vertical";
   autoScrollSpeed?: number;
   autoPlay?: boolean;
   onItemClick?: (index: number) => void;
@@ -20,7 +16,7 @@ interface SporeGraphProps {
 const SporeGraphAntd: React.FC<SporeGraphProps> = ({
   items,
   corner,
-  scrollDirection = 'horizontal',
+  scrollDirection = "horizontal",
   autoScrollSpeed = 35,
   autoPlay = true,
   onItemClick,
@@ -32,15 +28,15 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
   const animationRef = useRef<number>();
   const lastTimestampRef = useRef<number>();
 
-  const validatedItems = items.map(item => ({
+  const validatedItems = items.map((item) => ({
     ...item,
     name: item.name.slice(0, 64),
-    dif: Math.max(-10, Math.min(10, item.dif))
+    dif: Math.max(-10, Math.min(10, item.dif)),
   }));
 
   const updateMaxScroll = useCallback(() => {
     if (containerRef.current) {
-      if (scrollDirection === 'horizontal') {
+      if (scrollDirection === "horizontal") {
         setMaxScroll(containerRef.current.scrollWidth - containerRef.current.clientWidth);
       } else {
         setMaxScroll(containerRef.current.scrollHeight - containerRef.current.clientHeight);
@@ -50,16 +46,16 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
 
   useEffect(() => {
     updateMaxScroll();
-    window.addEventListener('resize', updateMaxScroll);
-    return () => window.removeEventListener('resize', updateMaxScroll);
+    window.addEventListener("resize", updateMaxScroll);
+    return () => window.removeEventListener("resize", updateMaxScroll);
   }, [updateMaxScroll, validatedItems.length]);
 
   const scrollToStart = () => {
     if (containerRef.current) {
-      if (scrollDirection === 'horizontal') {
-        containerRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+      if (scrollDirection === "horizontal") {
+        containerRef.current.scrollTo({ left: 0, behavior: "smooth" });
       } else {
-        containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
       }
       setScrollPosition(0);
     }
@@ -67,9 +63,8 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
 
   const handleScroll = useCallback(() => {
     if (containerRef.current) {
-      const newPosition = scrollDirection === 'horizontal'
-        ? containerRef.current.scrollLeft
-        : containerRef.current.scrollTop;
+      const newPosition =
+        scrollDirection === "horizontal" ? containerRef.current.scrollLeft : containerRef.current.scrollTop;
       setScrollPosition(newPosition);
     }
   }, [scrollDirection]);
@@ -89,7 +84,7 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
 
       if (containerRef.current) {
         let newPosition;
-        if (scrollDirection === 'horizontal') {
+        if (scrollDirection === "horizontal") {
           newPosition = containerRef.current.scrollLeft + scrollDelta;
           if (newPosition >= maxScroll) {
             newPosition = maxScroll;
@@ -139,7 +134,7 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
     if (item.position) return item.position;
 
     // Determine positioning based on scroll direction
-    if (scrollDirection === 'horizontal') {
+    if (scrollDirection === "horizontal") {
       const spacing = 220;
       const x = index * spacing;
       const y = (item.dif + 10) * 15;
@@ -161,45 +156,45 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
     const count = corner.length;
     const containerWidth = containerRef.current?.clientWidth || 800;
 
-    if (scrollDirection === 'horizontal') {
+    if (scrollDirection === "horizontal") {
       return corner.map((step, idx) => ({
         ...step,
-        x: ((idx / Math.max(count - 1, 1)) * (containerWidth * 1.6)) + 50,
+        x: (idx / Math.max(count - 1, 1)) * (containerWidth * 1.6) + 50,
         y: Math.sin(idx * 0.7) * 60 + 100,
       }));
     } else {
       return corner.map((step, idx) => ({
         ...step,
         x: Math.cos(idx * 0.7) * 120 + 200,
-        y: ((idx / Math.max(count - 1, 1)) * (count * 200)) + 50,
+        y: (idx / Math.max(count - 1, 1)) * (count * 200) + 50,
       }));
     }
   };
 
   const getContainerStyle = () => ({
-    overflow: 'auto',
-    width: '100%',
-    height: '550px',
-    position: 'relative' as const,
-    cursor: 'grab',
+    overflow: "auto",
+    width: "100%",
+    height: "550px",
+    position: "relative" as const,
+    cursor: "grab",
   });
 
   const getGraphStyle = () => {
-    if (scrollDirection === 'horizontal') {
+    if (scrollDirection === "horizontal") {
       return {
-        display: 'flex',
-        gap: '50px',
-        padding: '40px',
+        display: "flex",
+        gap: "50px",
+        padding: "40px",
         minWidth: `${validatedItems.length * 220}px`,
-        height: '100%',
-        position: 'relative' as const,
+        height: "100%",
+        position: "relative" as const,
       };
     } else {
       return {
-        position: 'relative' as const,
+        position: "relative" as const,
         height: `${validatedItems.length * 200}px`,
-        width: '100%',
-        padding: '20px',
+        width: "100%",
+        padding: "20px",
       };
     }
   };
@@ -207,42 +202,29 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
   const progressPercent = maxScroll > 0 ? (scrollPosition / maxScroll) * 100 : 0;
 
   return (
-    <Card
-      className="spore-graph-antd-container"
-      variant="borderless"
-      bodyStyle={{ padding: '20px' }}
-    >
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+    <Card className="spore-graph-antd-container" variant="borderless" bodyStyle={{ padding: "20px" }}>
+      <Space direction="vertical" size="large" style={{ width: "100%" }}>
         <div className="controls-panel">
           <Space>
             <Tooltip title="Return to start">
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={scrollToStart}
-                type="primary"
-                ghost
-              >
+              <Button icon={<ReloadOutlined />} onClick={scrollToStart} type="primary" ghost>
                 Start
               </Button>
             </Tooltip>
 
-            <Tooltip title={isAutoScrolling ? 'Pause auto-scroll' : 'Resume auto-scroll'}>
+            <Tooltip title={isAutoScrolling ? "Pause auto-scroll" : "Resume auto-scroll"}>
               <Button
                 icon={isAutoScrolling ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
                 onClick={toggleAutoScroll}
-                type={isAutoScrolling ? 'default' : 'primary'}
+                type={isAutoScrolling ? "default" : "primary"}
               >
-                {isAutoScrolling ? 'Pause' : 'Resume'}
+                {isAutoScrolling ? "Pause" : "Resume"}
               </Button>
             </Tooltip>
 
-            <Badge
-              count={scrollDirection === 'horizontal' ? '↔️' : '↕️'}
-              color="blue"
-              style={{ fontSize: '14px' }}
-            >
-              <Tag color="geekblue" style={{ padding: '4px 12px' }}>
-                {scrollDirection === 'horizontal' ? 'Horizontal' : 'Vertical'} Scroll
+            <Badge count={scrollDirection === "horizontal" ? "↔️" : "↕️"} color="blue" style={{ fontSize: "14px" }}>
+              <Tag color="geekblue" style={{ padding: "4px 12px" }}>
+                {scrollDirection === "horizontal" ? "Horizontal" : "Vertical"} Scroll
               </Tag>
             </Badge>
           </Space>
@@ -262,10 +244,10 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
                 key={`corner-${idx}`}
                 className="corner-marker-antd"
                 style={{
-                  position: 'absolute',
-                  left: scrollDirection === 'horizontal' ? cornerItem.x : cornerItem.x,
-                  top: scrollDirection === 'horizontal' ? cornerItem.y : cornerItem.y,
-                  transform: 'translate(-50%, -50%)',
+                  position: "absolute",
+                  left: scrollDirection === "horizontal" ? cornerItem.x : cornerItem.x,
+                  top: scrollDirection === "horizontal" ? cornerItem.y : cornerItem.y,
+                  transform: "translate(-50%, -50%)",
                 }}
               >
                 <Tooltip title={cornerItem.description}>
@@ -276,7 +258,10 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
               </div>
             ))}
 
-            <svg className="connection-lines-antd" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+            <svg
+              className="connection-lines-antd"
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+            >
               {validatedItems.map((_, idx) => {
                 if (idx === validatedItems.length - 1) return null;
                 const pos1 = getItemPosition(validatedItems[idx], idx);
@@ -298,23 +283,24 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
 
             {validatedItems.map((item, index) => {
               const pos = getItemPosition(item, index);
-              const nodeStyle = scrollDirection === 'horizontal'
-                ? { marginLeft: pos.x, marginTop: pos.y }
-                : { marginTop: pos.y, marginLeft: pos.x };
+              const nodeStyle =
+                scrollDirection === "horizontal"
+                  ? { marginLeft: pos.x, marginTop: pos.y }
+                  : { marginTop: pos.y, marginLeft: pos.x };
 
               return (
                 <Card
                   key={`node-${index}`}
-                  className={`graph-node-antd ${item.dif > 0 ? 'positive-node' : 'negative-node'}`}
+                  className={`graph-node-antd ${item.dif > 0 ? "positive-node" : "negative-node"}`}
                   style={nodeStyle}
                   hoverable
                   size="small"
-                  bodyStyle={{ padding: '12px' }}
-                  role={onItemClick ? 'button' : undefined}
+                  bodyStyle={{ padding: "12px" }}
+                  role={onItemClick ? "button" : undefined}
                   tabIndex={onItemClick ? 0 : undefined}
                   onClick={() => onItemClick?.(index)}
                   onKeyDown={(event) => {
-                    if (onItemClick && (event.key === 'Enter' || event.key === ' ')) {
+                    if (onItemClick && (event.key === "Enter" || event.key === " ")) {
                       event.preventDefault();
                       onItemClick(index);
                     }
@@ -326,8 +312,9 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
                       <strong>{item.name}</strong>
                     </div>
                     <div className="node-dif-antd">
-                      <Tag color={item.dif > 0 ? 'green' : 'red'} style={{ fontSize: '16px', fontWeight: 'bold' }}>
-                        {item.dif > 0 ? '+' : ''}{item.dif}
+                      <Tag color={item.dif > 0 ? "green" : "red"} style={{ fontSize: "16px", fontWeight: "bold" }}>
+                        {item.dif > 0 ? "+" : ""}
+                        {item.dif}
                       </Tag>
                     </div>
                     <div className="node-description-antd">
@@ -345,8 +332,8 @@ const SporeGraphAntd: React.FC<SporeGraphProps> = ({
             percent={Math.round(progressPercent)}
             showInfo={false}
             strokeColor={{
-              '0%': '#1890ff',
-              '100%': '#722ed1',
+              "0%": "#1890ff",
+              "100%": "#722ed1",
             }}
           />
           <div className="scroll-info">

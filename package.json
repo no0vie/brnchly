@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix --report-unused-disable-directives --max-warnings 0",
+    "format": "prettier --write '**/*.{ts,tsx,css,json,md}'",
+    "format:check": "prettier --check '**/*.{ts,tsx,css,json,md}'",
     "test": "vitest run",
     "preview": "vite preview"
   },
@@ -26,8 +29,11 @@
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.55.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.7",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "prettier": "^3.9.10",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
     "vitest": "^2.1.9"

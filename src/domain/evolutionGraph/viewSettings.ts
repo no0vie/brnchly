@@ -1,6 +1,7 @@
-export type EvolutionGraphMode = 'classic' | 'evolution' | 'skill-tree';
-export type EvolutionGraphTheme = 'dark' | 'light';
-export type EvolutionLayoutStrategy = 'horizontal-dag' | 'vertical-dag' | 'radial-tree' | 'manual';
+export type EvolutionGraphMode = "classic" | "evolution" | "skill-tree" | "graph";
+export type EvolutionGraphTheme = "dark" | "light";
+export type EvolutionLayoutStrategy =
+  "horizontal-dag" | "vertical-dag" | "radial" | "radial-tree" | "manual" | "stage-lane";
 
 export interface EvolutionViewSettings {
   mode: EvolutionGraphMode;
@@ -12,9 +13,9 @@ export interface EvolutionViewSettings {
 }
 
 export const DEFAULT_EVOLUTION_VIEW_SETTINGS: Readonly<EvolutionViewSettings> = {
-  mode: 'classic',
-  theme: 'dark',
-  layout: 'horizontal-dag',
+  mode: "classic",
+  theme: "dark",
+  layout: "horizontal-dag",
   autoplay: false,
   playbackSpeed: 1,
 };

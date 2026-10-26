@@ -1,5 +1,5 @@
-import React from 'react';
-import evolutionStore from '../stores/evolutionStore';
+import React from "react";
+import evolutionStore from "../stores/evolutionStore";
 
 export interface EvolutionContextType {
   steps: typeof evolutionStore.steps;
@@ -17,6 +17,6 @@ export const EvolutionContext = React.createContext<EvolutionContextType | null>
 
 export const useEvolutionSteps = () => {
   const ctx = React.useContext(EvolutionContext);
-  if (!ctx) throw new Error('useEvolutionSteps must be used within EvolutionProvider');
+  if (!ctx) throw new Error("useEvolutionSteps must be used within EvolutionProvider");
   return ctx;
 };

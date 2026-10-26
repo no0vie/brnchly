@@ -1,7 +1,7 @@
 export const CURRENT_EVOLUTION_GRAPH_SCHEMA_VERSION = 1 as const;
 
-export type NodeStatus = 'locked' | 'available' | 'acquired' | 'mastered';
-export type EvolutionEdgeType = 'dependency' | 'evolution' | 'related';
+export type NodeStatus = "locked" | "available" | "acquired" | "mastered";
+export type EvolutionEdgeType = "dependency" | "evolution" | "related";
 
 export interface Position {
   x: number;

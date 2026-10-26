@@ -55,11 +55,11 @@
   border-color: rgba(82, 196, 26, 0.4);
 }
 
-[data-theme='light'] .graph-node-antd.positive-node {
+[data-theme="light"] .graph-node-antd.positive-node {
   background: linear-gradient(135deg, rgba(217, 244, 208, 0.9), rgba(187, 229, 169, 0.9));
 }
 
-[data-theme='dark'] .graph-node-antd.positive-node {
+[data-theme="dark"] .graph-node-antd.positive-node {
   background: linear-gradient(135deg, rgba(30, 130, 70, 0.9), rgba(20, 80, 50, 0.9));
 }
 
@@ -67,11 +67,11 @@
   border-color: rgba(255, 77, 79, 0.4);
 }
 
-[data-theme='light'] .graph-node-antd.negative-node {
+[data-theme="light"] .graph-node-antd.negative-node {
   background: linear-gradient(135deg, rgba(255, 226, 226, 0.9), rgba(255, 187, 187, 0.9));
 }
 
-[data-theme='dark'] .graph-node-antd.negative-node {
+[data-theme="dark"] .graph-node-antd.negative-node {
   background: linear-gradient(135deg, rgba(200, 60, 60, 0.9), rgba(150, 40, 40, 0.9));
 }
 
@@ -135,11 +135,11 @@
   stroke: #1890ff;
 }
 
-[data-theme='light'] .connection-line-antd {
+[data-theme="light"] .connection-line-antd {
   stroke: rgba(24, 144, 255, 0.6);
 }
 
-[data-theme='dark'] .connection-line-antd {
+[data-theme="dark"] .connection-line-antd {
   filter: drop-shadow(0 0 2px rgba(24, 144, 255, 0.3));
   stroke: #1890ff;
 }
@@ -152,16 +152,17 @@
   border-radius: 10px;
 }
 
-[data-theme='light'] .scroll-progress-antd .ant-progress-trail {
+[data-theme="light"] .scroll-progress-antd .ant-progress-trail {
   background-color: rgba(0, 0, 0, 0.06);
 }
 
-[data-theme='dark'] .scroll-progress-antd .ant-progress-trail {
+[data-theme="dark"] .scroll-progress-antd .ant-progress-trail {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(-50%, -50%) translateY(0px);
   }
   50% {

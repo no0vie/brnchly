@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export const GripIcon: React.FC<{ isDragging: boolean }> = ({ isDragging }) => (
   <svg
@@ -7,7 +7,7 @@ export const GripIcon: React.FC<{ isDragging: boolean }> = ({ isDragging }) => (
     viewBox="0 0 16 16"
     fill="currentColor"
     opacity={isDragging ? 0.3 : 0.35}
-    style={{ pointerEvents: 'none' }}
+    style={{ pointerEvents: "none" }}
   >
     <circle cx="5" cy="3" r="1.8" />
     <circle cx="11" cy="3" r="1.8" />

@@ -1,11 +1,11 @@
-import { GraphItem, EvolutionStep } from '../types';
+import { GraphItem, EvolutionStep } from "../types";
 
 export const sampleItems: GraphItem[] = [
   {
     name: "Microbial Stage",
     dif: -8,
     description: "Single-celled organism in primordial soup",
-    position: { x: 50, y: 80 }
+    position: { x: 50, y: 80 },
   },
   {
     name: "Creature Stage",
@@ -36,7 +36,7 @@ export const sampleItems: GraphItem[] = [
     name: "Transcendence",
     dif: 10,
     description: "Becoming a god-like entity",
-  }
+  },
 ];
 
 export const defaultEvolutionSteps: EvolutionStep[] = [

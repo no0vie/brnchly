@@ -1,6 +1,6 @@
-import { makeAutoObservable, runInAction } from 'mobx';
-import type { EvolutionStep } from '../types';
-import { defaultEvolutionSteps } from '../data/sampleData';
+import { makeAutoObservable, runInAction } from "mobx";
+import type { EvolutionStep } from "../types";
+import { defaultEvolutionSteps } from "../data/sampleData";
 
 class EvolutionStore {
   steps: EvolutionStep[];
@@ -16,15 +16,21 @@ class EvolutionStore {
   }
 
   openModal() {
-    runInAction(() => { this.modalOpen = true; });
+    runInAction(() => {
+      this.modalOpen = true;
+    });
   }
 
   closeModal() {
-    runInAction(() => { this.modalOpen = false; });
+    runInAction(() => {
+      this.modalOpen = false;
+    });
   }
 
   toggleModal(open: boolean) {
-    runInAction(() => { this.modalOpen = open; });
+    runInAction(() => {
+      this.modalOpen = open;
+    });
   }
 
   getModalOpen(): boolean {
@@ -38,7 +44,9 @@ class EvolutionStore {
   }
 
   incrementVersion() {
-    runInAction(() => { this.version++; });
+    runInAction(() => {
+      this.version++;
+    });
   }
 
   addStep(step: EvolutionStep) {
@@ -77,13 +85,13 @@ class EvolutionStore {
       if (fromIndex === toIndex) return;
 
       const stepA = this.steps[fromIndex];
-      const stepOffsets = this.steps.map(item => item.offset);
+      const stepOffsets = this.steps.map((item) => item.offset);
 
-      this.steps.splice(fromIndex, 1)
-      this.steps.splice(toIndex, 0, stepA)
+      this.steps.splice(fromIndex, 1);
+      this.steps.splice(toIndex, 0, stepA);
       this.steps.forEach((item, index) => {
         item.offset = stepOffsets[index];
-      })
+      });
 
       this.version++;
     });
