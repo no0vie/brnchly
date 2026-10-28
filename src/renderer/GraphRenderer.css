@@ -204,7 +204,6 @@
 }
 .universal-node.is-dimmed {
   opacity: 0.2;
-  filter: grayscale(0.65);
 }
 .universal-node--new {
   animation: node-reveal 0.42s ease-out both;

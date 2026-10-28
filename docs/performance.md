@@ -36,7 +36,7 @@ All action measurements begin immediately before the real DOM control dispatch a
 | SVG edge rendering   | Clears all edges, restores the deterministic edge set, then waits two frames. Includes the React graph update, routing, DOM/SVG creation, style, layout, and presentation; it is not pure SVG paint time.                           |
 | Fit, pan, zoom       | Drives the existing toolbar/viewport controls and measures through two frames. Reduced motion removes transition-duration noise.                                                                                                    |
 | Dependency highlight | Selects deterministic node 0 and measures details/highlight presentation.                                                                                                                                                           |
-| Lane highlight       | Selects deterministic Lane 1 through the existing Ant control and measures presentation.                                                                                                                                            |
+| Lane highlight       | Opens the deterministic Lane 1 Ant control before timing, then measures option selection through two frames. This isolates graph presentation from dropdown-opening overhead.                                                       |
 | Playback             | Enters Evolution Mode, waits for controls, then starts playback. The reported operation is mode/playback exposure latency; frame timing is reported separately.                                                                     |
 | Long tasks           | Buffered Chromium `longtask` `PerformanceObserver` durations. No observed tasks means an empty supported sample set; unavailable observer support must be treated as unsupported, not as zero.                                      |
 | Frame timing         | Successive `requestAnimationFrame` intervals collected during the scenario. These are page frame intervals, not GPU-only render times. Backgrounding the page invalidates them.                                                     |
@@ -57,7 +57,13 @@ Establish a baseline on a dedicated machine before adopting budgets. Reasonable 
 
 A miss should trigger trace/manual DevTools investigation, not fail CI automatically. The harness intentionally has no timing assertions.
 
-## Current-environment run (2026-10-28)
+## Phase 4.8 release-candidate run (2026-10-29)
+
+The Phase 4.8 profile isolates lane option selection from Ant dropdown opening and removes the mass grayscale filter from dimmed nodes. Final lane-highlight median/p95 is 30.5/31.1 ms at 100 nodes, 128.5/239.2 ms at 500 nodes, and 157.6/162.4 ms at 1,000 nodes. The 100- and 1,000-node p95 targets are met; the 500-node p95 target is missed because of one 239.2 ms sample despite a 128.5 ms median.
+
+Aggregate frame p95 remains 33.2/83.3/216.8 ms, so large-graph frame variability remains a documented limitation. The full before/after table and raw final report are in `artifacts/performance/summary.md` and `artifacts/performance/phase-4.8-after.json`.
+
+## Previous current-environment run (2026-10-28)
 
 Environment: macOS 25.6.0 arm64, Node 24.16.0, Playwright 1.64.1, bundled headless Chromium 156.0.8078.4, one worker, reduced motion, and three samples per graph.
 

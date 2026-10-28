@@ -102,6 +102,148 @@ test.describe("Phase 4 universal editor", () => {
     expect(errors).toEqual([]);
   });
 
+  test("creates and cancels visual connections while rejecting an invalid dependency", async ({ page }) => {
+    const errors = runtimeErrors(page);
+    await openEmptyEditor(page);
+    await addTitledEntity(page, "branch", "branch-main", "Main branch");
+    await addNode(page, "node-one", "Node one");
+    await addNode(page, "node-two", "Node two");
+
+    await page.getByRole("button", { name: "Start connection from Node one" }).press("Enter");
+    await expect(page.getByRole("status").filter({ hasText: "Connecting from Node one" })).toBeVisible();
+    await page.getByRole("button", { name: "Connect to Node two" }).press("Enter");
+    await expect(page.getByRole("button", { name: /^node-one → node-two edge-/ })).toBeVisible();
+    await expect(page.locator("[data-edge-id]")).toHaveCount(1);
+
+    await page.getByRole("button", { name: "Start connection from Node two" }).press("Enter");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("status").filter({ hasText: "Connecting from" })).toHaveCount(0);
+    await expect(page.locator("[data-edge-id]")).toHaveCount(1);
+
+    await page.getByRole("button", { name: "Start connection from Node two" }).press("Enter");
+    await page.getByRole("button", { name: "Connect to Node one" }).press("Enter");
+    await expect(page.getByRole("region", { name: "Validation issues" })).toContainText(/cycle/i);
+    await expect(page.locator("[data-edge-id]")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /^node-one → node-two edge-/ })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("moves a manual node with one undoable drag and cancels a drag with Escape", async ({ page }) => {
+    const errors = runtimeErrors(page);
+    await openEmptyEditor(page);
+    await addTitledEntity(page, "branch", "branch-main", "Main branch");
+    await addNode(page, "node-one", "Node one");
+    await page.getByRole("button", { name: /^Node one node-one$/ }).click();
+    const inspector = page.getByRole("complementary", { name: "Inspector" });
+    await inspector.getByLabel("Manual X").fill("200");
+    await inspector.getByLabel("Manual Y").fill("180");
+    await inspector.getByRole("button", { name: "Save changes" }).click();
+    await page.getByLabel("Layout").selectOption("manual");
+
+    const node = page.getByRole("button", { name: /^Node one\. Status:/ });
+    const box = await node.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box!.x + 40, box!.y + 30);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 100, box!.y + 70);
+    await page.mouse.up();
+    await page.getByRole("button", { name: /^Node one node-one$/ }).click();
+    await expect(inspector.getByLabel("Manual X")).not.toHaveValue("200");
+    const movedX = await inspector.getByLabel("Manual X").inputValue();
+
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(inspector.getByLabel("Manual X")).toHaveValue("200");
+    await page.getByRole("button", { name: "Redo" }).click();
+    await expect(inspector.getByLabel("Manual X")).toHaveValue(movedX);
+
+    const movedBox = await node.boundingBox();
+    expect(movedBox).not.toBeNull();
+    await page.mouse.move(movedBox!.x + 40, movedBox!.y + 30);
+    await page.mouse.down();
+    await page.mouse.move(movedBox!.x + 140, movedBox!.y + 90);
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+    await page.getByRole("button", { name: /^Node one node-one$/ }).click();
+    await expect(inspector.getByLabel("Manual X")).toHaveValue(movedX);
+    await expect(page.getByRole("button", { name: "Redo" })).toBeDisabled();
+    expect(errors).toEqual([]);
+  });
+
+  test("bulk deletes a multi-selection and restores every node with one undo", async ({ page }) => {
+    const errors = runtimeErrors(page);
+    await openEmptyEditor(page);
+    await addTitledEntity(page, "branch", "branch-main", "Main branch");
+    await addNode(page, "node-one", "Node one");
+    await addNode(page, "node-two", "Node two");
+
+    await page.getByRole("button", { name: /^Node one node-one$/ }).click();
+    await page.getByRole("button", { name: /^Node two node-two$/ }).click({ modifiers: ["ControlOrMeta"] });
+    await expect(page.getByText("2 selected", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Bulk delete" }).click();
+    await expect(page.getByRole("button", { name: /^Node (one|two) node-/ })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByRole("button", { name: /^Node one node-one$/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Node two node-two$/ })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("imports valid JSON and preserves the current document after malformed input", async ({ page }) => {
+    const errors = runtimeErrors(page);
+    await openEmptyEditor(page);
+    await page.getByRole("textbox", { name: "Graph title" }).fill("Original graph");
+    await page.getByRole("button", { name: "Save metadata" }).click();
+    await expect(page.getByRole("status")).toHaveText("saved", { timeout: 5_000 });
+
+    const importedGraph = {
+      schemaVersion: 2,
+      id: "imported-graph",
+      title: "Imported graph",
+      description: "Imported safely",
+      branches: [],
+      stages: [],
+      lanes: [],
+      nodes: [],
+      edges: [],
+    };
+    await page.getByRole("button", { name: "Import file" }).click();
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "valid.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(importedGraph)),
+    });
+    await expect(page.getByRole("heading", { name: "Imported graph" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Import file" }).click();
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "invalid.json",
+      mimeType: "application/json",
+      buffer: Buffer.from("{not-json"),
+    });
+    await expect(page.getByRole("alert")).toContainText(/JSON/i);
+    await expect(page.getByRole("heading", { name: "Imported graph" })).toBeVisible();
+    await expect(page.getByLabel("Open document").getByRole("option", { name: "Untitled graph" })).toHaveCount(1);
+    expect(errors).toEqual([]);
+  });
+
+  test("keeps the current graph in memory when localStorage saving fails", async ({ page }) => {
+    const errors = runtimeErrors(page);
+    await openEmptyEditor(page);
+    await page.evaluate(() => {
+      Storage.prototype.setItem = () => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      };
+    });
+
+    await page.getByRole("textbox", { name: "Graph title" }).fill("Unsaved but safe");
+    await page.getByRole("button", { name: "Save metadata" }).click();
+    await expect(page.getByRole("heading", { name: "Unsaved but safe" })).toBeVisible();
+    await expect(page.getByRole("status")).toHaveText("error", { timeout: 5_000 });
+    await page.getByRole("button", { name: "New document" }).click();
+    await expect(page.getByRole("heading", { name: "Unsaved but safe" })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
   test("exports the current document as JSON", async ({ page }) => {
     const errors = runtimeErrors(page);
     await openEmptyEditor(page);

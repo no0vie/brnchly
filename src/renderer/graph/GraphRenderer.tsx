@@ -137,6 +137,7 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
   const effectiveHighlightedEdgeIds = explicitHighlight ? new Set(explicitHighlight.edgeIds) : highlightedEdgeIds;
   const effectiveHighlightedLaneIds = highlightState?.selectedLaneIds ?? highlightedLaneIds;
   const laneById = useMemo(() => new Map((graph.lanes ?? []).map((lane) => [lane.id, lane])), [graph.lanes]);
+  const branchById = useMemo(() => new Map(graph.branches.map((branch) => [branch.id, branch])), [graph.branches]);
   const stages = useMemo(
     () => [...(graph.stages ?? [])].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id)),
     [graph.stages],
@@ -610,11 +611,7 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
                 <GraphNodeCard
                   key={node.id}
                   node={node}
-                  color={
-                    laneById.get(node.laneId ?? "")?.color ??
-                    graph.branches.find((branch) => branch.id === node.branchId)?.color ??
-                    "#7c8cff"
-                  }
+                  color={laneById.get(node.laneId ?? "")?.color ?? branchById.get(node.branchId)?.color ?? "#7c8cff"}
                   position={displayedPositions[node.id]}
                   size={result.nodeSize}
                   selected={selectedNodeId === node.id || Boolean(selectedNodeIds?.has(node.id))}

@@ -63,6 +63,21 @@ export const EvolutionGraphView: React.FC<EvolutionGraphViewProps> = ({
     () => (selectedNodeId ? traverseGraph(traversalIndex, selectedNodeId, traversalMode) : undefined),
     [selectedNodeId, traversalIndex, traversalMode],
   );
+  const visibleNodeIds = useMemo(
+    () => (evolutionMode ? new Set(playback.snapshot.visibleNodeIds) : undefined),
+    [evolutionMode, playback.snapshot.visibleNodeIds],
+  );
+  const visibleEdgeIds = useMemo(
+    () => (evolutionMode ? new Set(playback.snapshot.visibleEdgeIds) : undefined),
+    [evolutionMode, playback.snapshot.visibleEdgeIds],
+  );
+  const newNodeIds = useMemo(
+    () => (evolutionMode ? new Set(playback.snapshot.newlyVisibleNodeIds) : undefined),
+    [evolutionMode, playback.snapshot.newlyVisibleNodeIds],
+  );
+  const highlightedNodeIds = useMemo(() => (traversal ? new Set(traversal.nodeIds) : undefined), [traversal]);
+  const highlightedEdgeIds = useMemo(() => (traversal ? new Set(traversal.edgeIds) : undefined), [traversal]);
+  const highlightedLaneIds = useMemo(() => (laneIds.length ? new Set(laneIds) : undefined), [laneIds]);
   const activeStage = graph.stages?.find(({ id }) => id === playback.snapshot.activeStageId);
 
   useEffect(() => {
@@ -167,13 +182,13 @@ export const EvolutionGraphView: React.FC<EvolutionGraphViewProps> = ({
             showLaneLabels={showLaneLabels}
             onLayoutChange={onLayoutChange}
             onManualCameraInteraction={() => evolutionMode && setCameraMode("manual")}
-            visibleNodeIds={evolutionMode ? new Set(playback.snapshot.visibleNodeIds) : undefined}
-            visibleEdgeIds={evolutionMode ? new Set(playback.snapshot.visibleEdgeIds) : undefined}
-            newNodeIds={evolutionMode ? new Set(playback.snapshot.newlyVisibleNodeIds) : undefined}
+            visibleNodeIds={visibleNodeIds}
+            visibleEdgeIds={visibleEdgeIds}
+            newNodeIds={newNodeIds}
             activeStageId={evolutionMode ? playback.snapshot.activeStageId : undefined}
-            highlightedNodeIds={traversal ? new Set(traversal.nodeIds) : undefined}
-            highlightedEdgeIds={traversal ? new Set(traversal.edgeIds) : undefined}
-            highlightedLaneIds={laneIds.length ? new Set(laneIds) : undefined}
+            highlightedNodeIds={highlightedNodeIds}
+            highlightedEdgeIds={highlightedEdgeIds}
+            highlightedLaneIds={highlightedLaneIds}
             onNodeSelectionChange={setSelectedNodeId}
             onNodeClick={onNodeClick}
           />

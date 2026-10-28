@@ -53,14 +53,15 @@ async function browserTextClick(page: Page, text: string) {
 }
 
 async function selectAntOption(page: Page, label: string, option: string) {
-  const start = await page.evaluate(() => performance.now());
   await page.getByRole("combobox", { name: label }).click();
-  await page.getByText(option, { exact: true }).last().click();
-  await page.evaluate(
-    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
-  );
-  const end = await page.evaluate(() => performance.now());
-  return end - start;
+  const optionElement = page.getByText(option, { exact: true }).last();
+  await expect(optionElement).toBeVisible();
+  return optionElement.evaluate(async (element: HTMLElement) => {
+    const start = performance.now();
+    element.click();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    return performance.now() - start;
+  });
 }
 
 test.describe("reproducible Chromium graph profiling", () => {
@@ -155,11 +156,11 @@ test.describe("reproducible Chromium graph profiling", () => {
       }
 
       const observed = await page.evaluate(() => {
-        const metrics = (
-          window as unknown as {
-            __BRNCHLY_BROWSER_METRICS__: { longTasks: number[]; frames: number[]; longTaskSupported: boolean };
-          }
-        ).__BRNCHLY_BROWSER_METRICS__;
+        const browserWindow = window as unknown as {
+          __BRNCHLY_BROWSER_METRICS__: { longTasks: number[]; frames: number[]; longTaskSupported: boolean };
+          __BRNCHLY_PERF__?: { reactCommits: Array<{ actualDuration: number }> };
+        };
+        const metrics = browserWindow.__BRNCHLY_BROWSER_METRICS__;
         const memory = performance as Performance & { memory?: { usedJSHeapSize: number } };
         return {
           longTasks: metrics.longTasks,
@@ -167,7 +168,7 @@ test.describe("reproducible Chromium graph profiling", () => {
           frames: metrics.frames,
           memory: memory.memory?.usedJSHeapSize ?? null,
           userAgent: navigator.userAgent,
-          reactCommits: window.__BRNCHLY_PERF__?.reactCommits ?? [],
+          reactCommits: browserWindow.__BRNCHLY_PERF__?.reactCommits ?? [],
         };
       });
 
