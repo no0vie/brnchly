@@ -1,76 +1,74 @@
-# Performance profiling
+# Chromium graph performance profiling
 
-Performance is tracked in two deliberately separate layers:
+The repository has two intentionally separate performance layers:
 
-1. `src/performance/benchmarks.test.ts` measures **algorithms in Node/Vitest**. Its median/p95 values are **not browser measurements** and do not include React, DOM, SVG, painting, compositing, input latency, or garbage-collection behavior representative of Chrome.
-2. Browser profiling measures the user-visible application in Chromium using Playwright and Chrome tracing/Performance APIs.
+- `src/performance/benchmarks.test.ts` profiles graph algorithms in Node/Vitest. Those numbers do **not** represent browser rendering.
+- `e2e/performance.spec.ts` profiles the real React/SVG graph in Playwright Chromium through the isolated `?perf=100|500|1000` harness.
 
-## Algorithmic baseline (Node/Vitest — not browser measurements)
+Neither suite enforces timing gates. Performance varies substantially by hardware, browser build, thermal state, headless mode, and background load.
 
-Run the reproducible focused suite from the repository root:
-
-```sh
-npm test -- src/performance/benchmarks.test.ts
-```
-
-The suite uses deterministic generated graphs of 100, 500, and 1,000 nodes and fixed seeds. It warms each scenario, records multiple iterations, and prints median and nearest-rank p95 for:
-
-- layout;
-- playback plan creation;
-- playback snapshot calculation;
-- traversal index creation plus traversal;
-- edge routing.
-
-Timing still varies with hardware, Node version, thermal state, and competing processes. Compare results only on a controlled machine with the same runtime and power settings. Record the Node/Vitest table separately from browser results.
-
-## Browser profiling protocol
-
-### Environment
-
-Record the commit, OS, CPU, RAM, Chrome and Node versions, viewport, device scale factor, and whether CPU throttling is enabled. Use a production build, not Vite development mode:
+## Run
 
 ```sh
-npm run build
-npm run preview -- --host 127.0.0.1
+npm run profile:chromium
 ```
 
-Run Chromium headed for trace inspection. Keep the viewport fixed (recommended: 1440 × 900), close unrelated applications, disable extensions, use the same deterministic graph and seed, and do one unrecorded warm-up. For each graph size and operation, collect at least 10 measured runs in a fresh page; report median and p95 rather than the best run.
+The default is three samples for each deterministic 100, 500, and 1,000-node graph. Override the sample count for a more stable local baseline:
 
-### Playwright and Chrome Performance APIs
+```sh
+PERF_SAMPLES=10 npm run profile:chromium
+```
 
-Use a temporary or future Playwright spec outside this baseline if automation is desired; no browser benchmark is inferred from the Vitest suite. A measurement should:
+The test uses only the `chromium` Playwright project, one worker, a 1440 × 900 viewport, reduced motion, and a fresh browser context per graph size. Playwright starts the existing Vite server according to `playwright.config.ts`. For release baselines, change that configuration to serve the production build or run an equivalent controlled preview; development React/Profiler overhead means the default command is best for reproducibility and regression comparison, not end-user absolute latency.
 
-1. Open a fresh `browser.newPage({ viewport: { width: 1440, height: 900 } })` and navigate to the production preview.
-2. Install `PerformanceObserver` instances before the operation for `longtask`, `measure`, and, where supported, `event` entries.
-3. Bracket app actions with `performance.mark()` / `performance.measure()`. Wait for two `requestAnimationFrame` callbacks after visual operations so style, layout, paint, and compositing can complete.
-4. Create a Chromium CDP session with `page.context().newCDPSession(page)`. Use `Performance.enable` and `Performance.getMetrics` for process metrics; use `Tracing.start`/`Tracing.end` (categories such as `devtools.timeline`, `blink.user_timing`, `v8`, and screenshots when needed) for frame, scripting, rendering, painting, and long-task analysis.
-5. Save a trace per operation and inspect it in Chrome DevTools Performance. Do not combine setup/navigation with the operation interval.
-6. Sample `performance.memory.usedJSHeapSize` only in Chromium where available. For a stronger memory measurement, use `performance.measureUserAgentSpecificMemory()` where supported and cross-origin isolation requirements are met. Force-GC-based numbers are diagnostic only and must be labeled as such.
+On success, Playwright attaches `performance-report.json` under that run's `test-results/` output directory. The JSON contains raw samples, median, nearest-rank p95, node/edge counts, Chromium version, headless status, OS/architecture, CPU count, host memory, Node version, user agent, viewport methodology, and support status for optional APIs.
 
-Playwright action duration alone is not a render metric. Prefer app marks correlated with trace events and presentation frames. Keep traces as artifacts, but summarize repeated runs with median/p95.
+The deterministic graph generator is `src/performance/graphGenerator.ts`. A fixed seed and size produce equivalent graph data; its unit/algorithm tests guard this property.
 
-### Operations
+## Metrics and boundaries
 
-- **Initial render:** start immediately before graph data is supplied; finish after the graph is visible and two animation frames have elapsed. Capture scripting, rendering, paint, long tasks, and heap delta.
-- **Fit:** invoke fit-to-content from a stable graph; finish after transform settles and two frames. Record total latency and dropped/slow frames.
-- **Pan/zoom:** replay the same pointer/wheel path for 2–5 seconds. Derive frame intervals from successive `requestAnimationFrame` timestamps and report median/p95 frame time, frames over 16.7 ms, and frames over 50 ms.
-- **Playback:** run the same segment at the same speed. Measure start latency, per-frame time, long tasks, and memory growth; separately mark snapshot calculation and visual update if app instrumentation permits.
-- **Highlighting:** select the same high-connectivity node and traverse the same mode. Measure click-to-present latency, frame time, and affected DOM/SVG work.
-- **Routing:** trigger a route recomputation without including fixture generation. Mark algorithm start/end in the app and correlate it with subsequent style/layout/paint work.
-- **Long tasks and memory:** count tasks over 50 ms, report maximum task duration, heap before/after, and heap after repeated playback/highlight/routing cycles. Reload between independent samples.
+All action measurements begin immediately before the real DOM control dispatch and end after two `requestAnimationFrame` callbacks. They therefore represent click-to-post-frame latency, not isolated JavaScript function time.
 
-## Browser result targets and record
+| Metric               | Measurement                                                                                                                                                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial render       | Navigation start to the harness readiness mark after the graph commit and two frames. Includes navigation/dev-server work, so compare only like-for-like runs.                                                                      |
+| Layout exposure      | **Unsupported.** Layout executes synchronously inside renderer memoization and cannot be isolated without modifying renderer core, which this harness deliberately avoids. Node/Vitest has a separate algorithmic layout benchmark. |
+| SVG edge rendering   | Clears all edges, restores the deterministic edge set, then waits two frames. Includes the React graph update, routing, DOM/SVG creation, style, layout, and presentation; it is not pure SVG paint time.                           |
+| Fit, pan, zoom       | Drives the existing toolbar/viewport controls and measures through two frames. Reduced motion removes transition-duration noise.                                                                                                    |
+| Dependency highlight | Selects deterministic node 0 and measures details/highlight presentation.                                                                                                                                                           |
+| Lane highlight       | Selects deterministic Lane 1 through the existing Ant control and measures presentation.                                                                                                                                            |
+| Playback             | Enters Evolution Mode, waits for controls, then starts playback. The reported operation is mode/playback exposure latency; frame timing is reported separately.                                                                     |
+| Long tasks           | Buffered Chromium `longtask` `PerformanceObserver` durations. No observed tasks means an empty supported sample set; unavailable observer support must be treated as unsupported, not as zero.                                      |
+| Frame timing         | Successive `requestAnimationFrame` intervals collected during the scenario. These are page frame intervals, not GPU-only render times. Backgrounding the page invalidates them.                                                     |
+| React render/commit  | React `Profiler.actualDuration` commit samples around `EvolutionGraphView`. Available in this development harness; production profiling builds may not expose equivalent data.                                                      |
+| Memory               | End-of-scenario `performance.memory.usedJSHeapSize` when Chromium exposes it. Otherwise the report says `supported: false`; no value is inferred. This is a point sample, not retained-heap or leak proof.                          |
 
-Targets are budgets for the recommended desktop profile (production Chromium, 1440 × 900, no CPU throttling). If another profile is used, record it and establish a separate baseline. Initial render and routing budgets apply to 1,000 nodes; interaction budgets apply across all fixture sizes.
+Raw data should be retained. Do not compare only rounded medians or combine Node algorithm timings with browser timings.
 
-| Date / commit | Browser profile         | Graph | Operation          | Runs | Median |  p95 | Long tasks (>50 ms) | Heap delta | Target                                           | Pass? |
-| ------------- | ----------------------- | ----: | ------------------ | ---: | -----: | ---: | ------------------: | ---------: | ------------------------------------------------ | ----- |
-| —             | Chrome — / OS — / CPU — | 1,000 | Initial render     |   10 |   — ms | — ms |                   — |       — MB | median ≤ 1,000 ms; p95 ≤ 1,500 ms                | —     |
-| —             | Chrome — / OS — / CPU — | 1,000 | Fit                |   10 |   — ms | — ms |                   — |       — MB | median ≤ 100 ms; p95 ≤ 200 ms                    | —     |
-| —             | Chrome — / OS — / CPU — | 1,000 | Pan/zoom frames    |   10 |   — ms | — ms |                   — |       — MB | median ≤ 16.7 ms; p95 ≤ 33.3 ms                  | —     |
-| —             | Chrome — / OS — / CPU — | 1,000 | Playback frames    |   10 |   — ms | — ms |                   — |       — MB | median ≤ 16.7 ms; p95 ≤ 33.3 ms                  | —     |
-| —             | Chrome — / OS — / CPU — | 1,000 | Highlighting       |   10 |   — ms | — ms |                   — |       — MB | median ≤ 100 ms; p95 ≤ 200 ms                    | —     |
-| —             | Chrome — / OS — / CPU — | 1,000 | Routing + present  |   10 |   — ms | — ms |                   — |       — MB | median ≤ 250 ms; p95 ≤ 500 ms                    | —     |
-| —             | Chrome — / OS — / CPU — | 1,000 | 20-cycle stability |   10 |      — |    — |                   — |       — MB | no sustained heap growth > 20%; no task > 200 ms | —     |
+## Suggested budgets (non-gating)
 
-Treat a budget miss as a prompt to inspect the trace, not as proof of a specific root cause. Store raw samples and environment metadata alongside each completed table so regressions can be reproduced.
+Establish a baseline on a dedicated machine before adopting budgets. Reasonable investigation thresholds for 1,000 nodes on a modern desktop are:
+
+- initial render median ≤ 1,500 ms and p95 ≤ 2,500 ms;
+- fit/zoom/highlight median ≤ 100 ms and p95 ≤ 250 ms;
+- pan and playback frame p95 ≤ 33.3 ms;
+- no individual long task above 200 ms;
+- no sustained heap increase above 20% across a repeated 20-cycle scenario.
+
+A miss should trigger trace/manual DevTools investigation, not fail CI automatically. The harness intentionally has no timing assertions.
+
+## Current-environment run (2026-10-28)
+
+Environment: macOS sandbox, Playwright headless Chromium, one worker. `npm run build` and the focused deterministic generator tests passed.
+
+Browser profiling did **not** complete in this environment. The initial run was forcibly stopped at the external 10-minute command bound; a bounded two-sample retry (`PERF_SAMPLES=2 npm run profile:chromium`) then hit the spec's 600,000 ms timeout while Chromium was creating a page after the earlier terminated process. No complete JSON artifact was produced and no timing, long-task, frame, React, or memory values are reported here. These values are **unavailable**, not zero. Run the command in a clean local process environment to establish the first browser baseline.
+
+## Limitations
+
+- The allowed scope excludes renderer instrumentation, so browser layout and edge routing cannot be independently marked.
+- Two-frame completion is a practical presentation proxy; it does not prove raster completion on every platform.
+- Headless Chromium can differ from headed Chrome and from GPU-enabled user environments.
+- React Profiler adds overhead and its durations are not browser paint durations.
+- `performance.memory` is Chromium-specific and non-standard.
+- The automated playback metric covers activation/start latency, while aggregate frame timing covers ongoing animation; it does not run a long, fixed-duration playback soak.
+- The harness records environment facts but not commit SHA, CPU model, power mode, thermal state, or CPU throttling. Record those alongside release baselines.
