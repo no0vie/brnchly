@@ -1,0 +1,150 @@
+.universal-editor {
+  display: grid;
+  gap: 12px;
+  color: var(--editor-text, inherit);
+}
+.editor-toolbar,
+.editor-titlebar,
+.selection-actions,
+.form-actions,
+.canvas-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.editor-toolbar,
+.editor-titlebar,
+.structure-panel,
+.inspector-panel,
+.editor-canvas,
+.validation-list,
+.editor-empty {
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, Canvas 94%, transparent);
+}
+.editor-titlebar > div:first-child {
+  margin-right: auto;
+}
+.editor-titlebar h2,
+.editor-titlebar p {
+  margin: 0;
+}
+.view-switch {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 7px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.view-switch button[aria-pressed="true"] {
+  background: #1677ff;
+  color: white;
+}
+.save-status {
+  margin-left: auto;
+  text-transform: capitalize;
+  font-size: 12px;
+}
+.save-status--error,
+.editor-error,
+.validation-list {
+  color: #b42318;
+}
+.editor-error {
+  padding: 10px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+}
+.validation-list ul {
+  margin: 6px 0 0 20px;
+}
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) minmax(220px, 280px);
+  gap: 12px;
+  align-items: start;
+}
+.structure-panel,
+.inspector-panel {
+  max-height: calc(100vh - 250px);
+  overflow: auto;
+}
+.structure-panel > input {
+  width: 100%;
+}
+.selection-actions {
+  margin: 10px 0;
+  font-size: 12px;
+}
+.structure-group {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+.structure-group > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.structure-group > button {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  text-align: left;
+}
+.structure-group > button.selected {
+  outline: 2px solid #1677ff;
+}
+.structure-group small {
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.editor-canvas {
+  min-width: 0;
+  overflow: hidden;
+}
+.inspector-panel form {
+  display: grid;
+  gap: 10px;
+}
+.inspector-panel label {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.inspector-panel input,
+.inspector-panel textarea,
+.inspector-panel select {
+  width: 100%;
+  padding: 7px;
+}
+.inspector-panel textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+button.danger {
+  color: #b42318;
+}
+@media (max-width: 1000px) {
+  .editor-grid {
+    grid-template-columns: 200px minmax(0, 1fr);
+  }
+  .inspector-panel {
+    grid-column: 1 / -1;
+    max-height: none;
+  }
+}
+@media (max-width: 700px) {
+  .editor-grid {
+    grid-template-columns: 1fr;
+  }
+  .structure-panel,
+  .inspector-panel {
+    max-height: none;
+  }
+}
