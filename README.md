@@ -4,19 +4,24 @@
 
 ## Status
 
-**Evolution Graph 2.0 — Phase 2 complete.**
+**Evolution Graph 2.0 — Phase 3 implemented.**
 
 - React 18, TypeScript strict, Vite, Ant Design.
 - Versioned universal graph schema with runtime validation and migration.
 - Pure layout and viewport engines independent from React.
 - Interactive Graph Mode plus backward-compatible Classic Mode.
-- Dark/light themes and three selectable demos.
+- Deterministic evolution playback with seek, stage navigation, speed control, and reduced-motion support.
+- Animated camera, dependency/lane highlighting, stable multi-port edge routing, and three universal demos.
+- Vitest component/unit coverage plus Chromium Playwright smoke tests.
 
 ## Architecture
 
 ```text
 src/
 ├── domain/evolutionGraph/  # Schema, validation, migrations, JSON codec
+├── graph/playback/         # Pure deterministic playback plan/controller
+├── graph/traversal/        # Indexed dependency neighborhood traversal
+├── graph/routing/          # Stable multi-port SVG edge routing
 ├── layout/                 # Pure deterministic layout strategies
 ├── viewport/               # Pure camera/coordinate math
 ├── renderer/               # Embeddable Classic and Graph renderers
@@ -105,6 +110,18 @@ Graph Mode uses accessible HTML node cards and an SVG geometry layer.
 
 Stage headers and lane labels are overlays, not graph nodes. Selecting one focuses its layout region.
 
+## Evolution playback
+
+`src/graph/playback` is React-independent. `createPlaybackPlan` derives deterministic reveal groups and direct seek snapshots from an `EvolutionGraph`; `PlaybackController` supplies play, pause/resume, restart, seek, speed changes, ticking, and stage checkpoints. Stage/Lane graphs use stage order and stable node IDs. Free graphs use dependency/evolution topological batches with deterministic disconnected-component and cycle fallback. Edges appear only after both endpoints; `related` edges never affect ordering.
+
+Graph Mode exposes Play/Pause/Resume, Restart, Previous/Next stage, seek, `0.5×–2×`, progress announcements, and Follow/Overview/Manual camera modes. Playback changes presentation only: it does not mutate graph data or recalculate layout per frame.
+
+## Highlighting and routing
+
+Selecting a node enables Direct, Upstream, Downstream, Both, and Related neighborhoods. Traversal is cycle-safe and reuses an indexed adjacency structure. Lane highlighting supports multiple arbitrary numeric-coordinate lanes, cross-lane edges, reset, and single-lane camera focus. Selection/highlight styles use outline, opacity, and text—not color alone.
+
+Routing uses deterministic boundary ports and stable parallel-edge offsets. It avoids duplicate arrowheads at a shared port and keeps geometry stable across renders without global route optimization.
+
 ## Viewport
 
 The pure `src/viewport` API includes:
@@ -114,7 +131,7 @@ The pure `src/viewport` API includes:
 - `worldToScreen`, `screenToWorld`;
 - `resizeViewport` and `createViewport`.
 
-The renderer supports drag pan, cursor-relative wheel zoom, touch pan/pinch, zoom limits, fit-to-view, reset, and focus. Stage/Lane opens with fit-to-view and a readable minimum scale. `GraphRendererHandle` exposes `fitToView`, `resetView`, `focusStage`, `focusLane`, `setCamera`, and `getCamera` for embedding and future camera animation.
+The renderer supports drag pan, cursor-relative wheel zoom, touch pan/pinch, zoom limits, fit-to-view, reset, and focus. Stage/Lane opens with fit-to-view and a readable minimum scale. `GraphRendererHandle` exposes `fitToView`, `resetView`, `focusStage`, `focusLane`, `focusNode`, `setCamera`, `getCamera`, and `cancelCameraTransition`. Focus/set methods accept `{ duration, easing, signal }`; a new command or manual pan/zoom cancels the prior transition without jumping to a stale target.
 
 ## Renderer API
 
@@ -172,18 +189,21 @@ Quality gates:
 npm test
 npm run lint
 npm run build
+npm run test:e2e
 ```
 
-Phase 2 currently has 31 unit tests covering domain validation/migration/serialization, all layouts (including deterministic 150-node DAG and multi-node Stage/Lane overlap checks), viewport fit/zoom/transforms/focus/resize, and Classic adapter regression.
+The Vitest suite covers domain compatibility, layout/viewport, playback, traversal, routing, React behavior, reduced-motion wiring, cleanup, and deterministic performance fixtures. Playwright runs the critical flow in Chromium and a `prefers-reduced-motion: reduce` project. Install browsers once with `npx playwright install chromium`.
+
+`src/performance` contains deterministic 100/500/1000-node algorithmic benchmarks with median/p95 reporting. These Node/Vitest numbers are not browser measurements. See [docs/performance.md](docs/performance.md) for the reproducible real-browser profiling procedure and result table.
 
 ## Current limitations
 
-- Edge routing uses smooth cubic paths but does not perform obstacle avoidance or edge bundling.
+- Edge routing uses stable multi-port cubic paths but does not perform global obstacle avoidance or bundling.
 - Nodes are not draggable/editable in Graph Mode; full CRUD belongs to Phase 4.
-- No virtualization. The tested target is 100+ nodes; larger datasets should be profiled before choosing Canvas/WebGL.
-- No playback or complex camera/node animation.
+- No virtualization; the deterministic 1000-node algorithm benchmarks do not replace real-browser render/FPS profiling.
 - Stage order and lane coordinate collisions are rejected rather than automatically resolved.
-- Ant Design remains the largest production chunk; code splitting is future optimization work.
+- Ant Design remains the largest production chunk. Graph Mode is the default route, so lazy-loading it would not improve the default experience; no speculative code split was added without a route-level loading boundary.
+- Camera follow targets stages; free-graph playback remains overview/manual rather than following every topological batch.
 
 See [ADR 0001](docs/adr/0001-layout-engine-and-renderer.md) for renderer/layout trade-offs.
 
@@ -191,10 +211,7 @@ See [ADR 0001](docs/adr/0001-layout-engine-and-renderer.md) for renderer/layout 
 
 ### Phase 3 — Evolution Experience
 
-- staged playback and reduced-motion support;
-- dependency/branch focus and traversal highlighting;
-- animated camera transitions through the existing camera API;
-- improved edge routing and graph navigation.
+Implemented: staged/free-graph playback, reduced motion, dependency and multi-lane focus, cancellable camera transitions, stable edge routing, component/E2E tests, and profiling harness.
 
 ### Phase 4 — Editor
 
