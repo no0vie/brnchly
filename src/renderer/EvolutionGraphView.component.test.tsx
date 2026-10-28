@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createRef } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { GraphRendererHandle } from "./GraphRenderer";
 import { threeLaneEvolution } from "../data/demoGraphs";
 import { EvolutionGraphView } from "./EvolutionGraphView";
 import { GraphRenderer } from "./GraphRenderer";
@@ -84,6 +86,138 @@ describe("EvolutionGraphView", () => {
       expect(screen.getByRole("button", { name: "Upper path. Status: acquired" })).toHaveClass("is-highlighted"),
     );
     expect(container.querySelector('[data-edge-id="e3"]')).toHaveClass("is-highlighted");
+  });
+
+  it("derives traversal and lane highlighting from GraphHighlightState", async () => {
+    const { container } = render(
+      <GraphRenderer
+        graph={threeLaneEvolution}
+        layout="stage-lane"
+        highlightState={{
+          rootNodeId: "origin",
+          traversalMode: "direct",
+          selectedLaneIds: new Set(["lane-a"]),
+        }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Origin. Status: mastered" })).toHaveClass("is-highlighted"),
+    );
+    expect(screen.getByRole("button", { name: "Upper path. Status: acquired" })).toHaveClass("is-highlighted");
+    expect(container.querySelector('[data-edge-id="e1"]')).toHaveClass("is-highlighted");
+    expect(container.querySelector('[data-edge-id="e3"]')).toHaveClass("is-highlighted");
+  });
+
+  it("supports uncontrolled selection with a default and null as none", async () => {
+    const user = userEvent.setup();
+    const onSelectedNodeChange = vi.fn();
+    const { rerender } = render(
+      <GraphRenderer
+        graph={threeLaneEvolution}
+        layout="stage-lane"
+        defaultSelectedNodeId="origin"
+        onSelectedNodeChange={onSelectedNodeChange}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Origin. Status: mastered" })).toHaveClass("universal-node--selected");
+    await user.click(screen.getByRole("button", { name: "Close node details" }));
+    expect(onSelectedNodeChange).toHaveBeenLastCalledWith(null);
+    expect(screen.queryByRole("button", { name: "Close node details" })).not.toBeInTheDocument();
+
+    rerender(<GraphRenderer graph={threeLaneEvolution} layout="stage-lane" selectedNodeId={null} />);
+    await user.click(screen.getByRole("button", { name: "Upper path. Status: acquired" }));
+    expect(screen.queryByRole("button", { name: "Close node details" })).not.toBeInTheDocument();
+  });
+
+  it("keeps controlled selection authoritative while reporting requested changes", async () => {
+    const user = userEvent.setup();
+    const onSelectedNodeChange = vi.fn();
+    render(
+      <GraphRenderer
+        graph={threeLaneEvolution}
+        layout="stage-lane"
+        selectedNodeId="origin"
+        onSelectedNodeChange={onSelectedNodeChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Upper path. Status: acquired" }));
+    expect(onSelectedNodeChange).toHaveBeenCalledWith("upper-a");
+    expect(screen.getByRole("button", { name: "Origin. Status: mastered" })).toHaveClass("universal-node--selected");
+  });
+
+  it("retains legacy selection callback compatibility", async () => {
+    const user = userEvent.setup();
+    const legacy = vi.fn();
+    render(
+      <GraphRenderer
+        graph={threeLaneEvolution}
+        layout="stage-lane"
+        defaultSelectedNodeId="origin"
+        onNodeSelectionChange={legacy}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Close node details" }));
+    expect(legacy).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it("uses an uncontrolled default camera and reports only actual viewport changes", () => {
+    const rendererRef = createRef<GraphRendererHandle>();
+    const onCameraChange = vi.fn();
+    render(
+      <GraphRenderer
+        ref={rendererRef}
+        graph={threeLaneEvolution}
+        layout="stage-lane"
+        defaultCamera={{ x: 12, y: 34, zoom: 1 }}
+        onCameraChange={onCameraChange}
+      />,
+    );
+    onCameraChange.mockClear();
+
+    act(() => rendererRef.current?.setCamera({ x: 12, y: 34, zoom: 1 }));
+    expect(onCameraChange).not.toHaveBeenCalled();
+    act(() => rendererRef.current?.setCamera({ x: 20, y: 34, zoom: 1 }));
+    expect(onCameraChange).toHaveBeenCalledTimes(1);
+    expect(rendererRef.current?.getCamera()).toEqual({ x: 20, y: 34, zoom: 1 });
+  });
+
+  it("keeps a controlled camera authoritative and does not create callback cycles", () => {
+    const rendererRef = createRef<GraphRendererHandle>();
+    const onCameraChange = vi.fn();
+    const camera = { x: 10, y: 20, zoom: 1 };
+    const { rerender } = render(
+      <GraphRenderer
+        ref={rendererRef}
+        graph={threeLaneEvolution}
+        layout="stage-lane"
+        camera={camera}
+        onCameraChange={onCameraChange}
+      />,
+    );
+    onCameraChange.mockClear();
+
+    act(() => rendererRef.current?.setCamera(camera));
+    expect(onCameraChange).not.toHaveBeenCalled();
+    act(() => rendererRef.current?.setCamera({ x: 30, y: 20, zoom: 1 }));
+    expect(onCameraChange).toHaveBeenCalledTimes(1);
+    expect(rendererRef.current?.getCamera()).toEqual(camera);
+
+    onCameraChange.mockClear();
+    rerender(
+      <GraphRenderer
+        ref={rendererRef}
+        graph={threeLaneEvolution}
+        layout="stage-lane"
+        camera={{ x: 30, y: 20, zoom: 1 }}
+        onCameraChange={onCameraChange}
+      />,
+    );
+    expect(onCameraChange).not.toHaveBeenCalled();
+    expect(rendererRef.current?.getCamera()).toEqual({ x: 30, y: 20, zoom: 1 });
   });
 
   it("cancels animation resources on unmount", () => {
