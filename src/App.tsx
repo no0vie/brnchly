@@ -3,6 +3,7 @@ import { Layout, Typography, Space, Card, Select, Button, Segmented, Switch } fr
 import { ExperimentOutlined, SwapOutlined, SettingOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react-lite";
 import { EvolutionGraphView } from "./renderer";
+import { UniversalEditor } from "./editor/ui/UniversalEditor";
 import {
   migrateLegacyEvolutionData,
   type EvolutionGraphMode,
@@ -13,6 +14,8 @@ import { demoGraphs } from "./data/demoGraphs";
 import { useTheme } from "./contexts/theme";
 import { EvolutionProvider } from "./contexts/evolutionProvider";
 import { useEvolutionSteps } from "./contexts/useEvolutionSteps";
+import { PerformanceHarness } from "./performance/PerformanceHarness";
+import type { PerformanceGraphSize } from "./performance/graphGenerator";
 import "./App.css";
 
 const { Header, Content, Footer } = Layout;
@@ -34,7 +37,7 @@ const AppContent: React.FC = () => {
     () => migrateLegacyEvolutionData(sampleItems, steps, { id: "classic-evolution", title: "Classic Evolution Graph" }),
     [steps],
   );
-  const [mode, setMode] = useState<EvolutionGraphMode>("graph");
+  const [mode, setMode] = useState<EvolutionGraphMode | "editor">("graph");
   const [demoId, setDemoId] = useState(demoGraphs[0].id);
   const selectedDemo = demoGraphs.find((demo) => demo.id === demoId) ?? demoGraphs[0];
   const graph = mode === "classic" ? classicGraph : selectedDemo;
@@ -93,6 +96,7 @@ const AppContent: React.FC = () => {
                 options={[
                   { value: "classic", label: "Classic Mode" },
                   { value: "graph", label: "Graph Mode" },
+                  { value: "editor", label: "Editor Mode" },
                 ]}
               />
               {mode === "graph" ? (
@@ -119,24 +123,32 @@ const AppContent: React.FC = () => {
                     Drag to pan · Wheel or pinch to zoom · Select a node for details
                   </Text>
                 </>
-              ) : (
+              ) : mode === "classic" ? (
                 <Text type="secondary" className="mode-description">
                   Phase 1 UI remains available with its original scrolling and editor.
+                </Text>
+              ) : (
+                <Text type="secondary" className="mode-description">
+                  Create and edit local universal graph documents.
                 </Text>
               )}
             </div>
           </Card>
 
-          <EvolutionGraphView
-            graph={graph}
-            mode={mode}
-            readonly
-            theme={theme}
-            autoplay={mode === "classic"}
-            layout={layout}
-            showLaneLabels={showLaneLabels}
-            onLayoutChange={(next) => setLayouts((current) => ({ ...current, [selectedDemo.id]: next }))}
-          />
+          {mode === "editor" ? (
+            <UniversalEditor theme={theme} />
+          ) : (
+            <EvolutionGraphView
+              graph={graph}
+              mode={mode}
+              readonly
+              theme={theme}
+              autoplay={mode === "classic"}
+              layout={layout}
+              showLaneLabels={showLaneLabels}
+              onLayoutChange={(next) => setLayouts((current) => ({ ...current, [selectedDemo.id]: next }))}
+            />
+          )}
         </div>
       </Content>
 
@@ -147,9 +159,16 @@ const AppContent: React.FC = () => {
   );
 };
 
-const AppWrapper: React.FC = () => (
-  <EvolutionProvider>
-    <AppContent />
-  </EvolutionProvider>
-);
+const AppWrapper: React.FC = () => {
+  const requestedSize = Number(new URLSearchParams(window.location.search).get("perf"));
+  const performanceSize = [100, 500, 1000].includes(requestedSize)
+    ? (requestedSize as PerformanceGraphSize)
+    : undefined;
+
+  return (
+    <EvolutionProvider>
+      {performanceSize ? <PerformanceHarness size={performanceSize} /> : <AppContent />}
+    </EvolutionProvider>
+  );
+};
 export default AppWrapper;

@@ -39,7 +39,7 @@ class EvolutionStore {
 
   // Always return a new array reference so observers detect changes
   getSteps(): EvolutionStep[] {
-    this.version; // track dependency on version
+    void this.version; // track dependency on version
     return [...this.steps];
   }
 

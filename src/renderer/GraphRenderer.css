@@ -118,8 +118,15 @@
   fill: #a78bfa;
 }
 
+.universal-node-shell {
+  position: absolute;
+  pointer-events: auto;
+}
 .universal-node {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: auto;
   display: grid;
   grid-template-columns: 26px 1fr;
@@ -201,6 +208,43 @@
 }
 .universal-node--new {
   animation: node-reveal 0.42s ease-out both;
+}
+.universal-node-shell.is-connecting .universal-node,
+.universal-node-shell.is-connection-target .universal-node {
+  outline: 2px solid var(--lane-color, #7c8cff);
+  outline-offset: 3px;
+}
+.universal-node__port,
+.universal-node__target {
+  position: absolute;
+  z-index: 4;
+  pointer-events: auto;
+}
+.universal-node__port {
+  top: 50%;
+  right: -9px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 3px solid #080b18;
+  border-radius: 50%;
+  background: #70d6ff;
+  transform: translateY(-50%);
+  cursor: crosshair;
+}
+.universal-node__target {
+  inset: -7px;
+  border: 2px dashed #70d6ff;
+  border-radius: 15px;
+  background: transparent;
+  cursor: crosshair;
+}
+.graph-connection-preview {
+  fill: none;
+  stroke: #70d6ff;
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  vector-effect: non-scaling-stroke;
 }
 .universal-node--mastered {
   box-shadow:
