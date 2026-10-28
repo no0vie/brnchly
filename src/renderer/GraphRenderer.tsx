@@ -13,6 +13,7 @@ import { Button, Select, Space, Tooltip } from "antd";
 import { CompressOutlined, EyeOutlined, MinusOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { EvolutionGraph, EvolutionLayoutStrategy, EvolutionNode } from "../domain/evolutionGraph";
 import { layoutGraph, type LayoutRegion, type Size } from "../layout";
+import { routeEdges } from "../graph/routing";
 import {
   clampZoom,
   createViewport,
@@ -33,13 +34,21 @@ const MAX_ZOOM = 2.5;
 const NODE_WIDTH = 176;
 const NODE_HEIGHT = 88;
 
+export interface CameraTransitionOptions {
+  duration?: number;
+  easing?: "linear" | "easeInOut";
+  signal?: AbortSignal;
+}
+
 export interface GraphRendererHandle {
-  fitToView: () => void;
-  resetView: () => void;
-  focusStage: (stageId: string) => void;
-  focusLane: (laneId: string) => void;
-  setCamera: (viewport: Viewport) => void;
+  fitToView: (options?: CameraTransitionOptions) => void;
+  resetView: (options?: CameraTransitionOptions) => void;
+  focusStage: (stageId: string, options?: CameraTransitionOptions) => void;
+  focusLane: (laneId: string, options?: CameraTransitionOptions) => void;
+  focusNode: (nodeId: string, options?: CameraTransitionOptions) => void;
+  setCamera: (viewport: Viewport, options?: CameraTransitionOptions) => void;
   getCamera: () => Viewport;
+  cancelCameraTransition: () => void;
 }
 
 export interface GraphRendererProps {
@@ -48,34 +57,21 @@ export interface GraphRendererProps {
   readonly?: boolean;
   showLaneLabels?: boolean;
   onNodeClick?: (node: EvolutionNode) => void;
+  onNodeSelectionChange?: (nodeId: string | undefined) => void;
   onLayoutChange?: (layout: EvolutionLayoutStrategy) => void;
+  onManualCameraInteraction?: () => void;
+  visibleNodeIds?: ReadonlySet<string>;
+  visibleEdgeIds?: ReadonlySet<string>;
+  newNodeIds?: ReadonlySet<string>;
+  activeStageId?: string | null;
+  highlightedNodeIds?: ReadonlySet<string>;
+  highlightedEdgeIds?: ReadonlySet<string>;
+  highlightedLaneIds?: ReadonlySet<string>;
 }
 
 const edgeClass = (type: EvolutionGraph["edges"][number]["type"]) => `graph-edge graph-edge--${type}`;
 const regionFor = (regions: LayoutRegion[], kind: LayoutRegion["kind"], id: string) =>
   regions.find((region) => region.kind === kind && region.id === id);
-
-const edgePorts = (
-  source: { x: number; y: number },
-  target: { x: number; y: number },
-  size: Size,
-  vertical: boolean,
-) => {
-  const sourceCenter = { x: source.x + size.width / 2, y: source.y + size.height / 2 };
-  const targetCenter = { x: target.x + size.width / 2, y: target.y + size.height / 2 };
-  if (vertical) {
-    const forward = targetCenter.y >= sourceCenter.y;
-    return {
-      source: { x: sourceCenter.x, y: sourceCenter.y + (forward ? size.height / 2 : -size.height / 2) },
-      target: { x: targetCenter.x, y: targetCenter.y + (forward ? -size.height / 2 : size.height / 2) },
-    };
-  }
-  const forward = targetCenter.x >= sourceCenter.x;
-  return {
-    source: { x: sourceCenter.x + (forward ? size.width / 2 : -size.width / 2), y: sourceCenter.y },
-    target: { x: targetCenter.x + (forward ? -size.width / 2 : size.width / 2), y: targetCenter.y },
-  };
-};
 
 const GraphNodeCard = memo(function GraphNodeCard({
   node,
@@ -83,6 +79,9 @@ const GraphNodeCard = memo(function GraphNodeCard({
   position,
   size,
   selected,
+  newlyRevealed,
+  highlighted,
+  dimmed,
   onSelect,
 }: {
   node: EvolutionNode;
@@ -90,12 +89,15 @@ const GraphNodeCard = memo(function GraphNodeCard({
   position: { x: number; y: number };
   size: Size;
   selected: boolean;
+  newlyRevealed: boolean;
+  highlighted: boolean;
+  dimmed: boolean;
   onSelect: (node: EvolutionNode) => void;
 }) {
   return (
     <button
       type="button"
-      className={`universal-node universal-node--${node.status}${selected ? " universal-node--selected" : ""}`}
+      className={`universal-node universal-node--${node.status}${selected ? " universal-node--selected" : ""}${newlyRevealed ? " universal-node--new" : ""}${highlighted ? " is-highlighted" : ""}${dimmed ? " is-dimmed" : ""}`}
       style={
         {
           left: position.x,
@@ -125,15 +127,39 @@ const GraphNodeCard = memo(function GraphNodeCard({
 });
 
 export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>(function GraphRenderer(
-  { graph, layout, showLaneLabels = true, onNodeClick, onLayoutChange },
+  {
+    graph,
+    layout,
+    showLaneLabels = true,
+    onNodeClick,
+    onNodeSelectionChange,
+    onLayoutChange,
+    onManualCameraInteraction,
+    visibleNodeIds,
+    visibleEdgeIds,
+    newNodeIds,
+    activeStageId: playbackStageId,
+    highlightedNodeIds,
+    highlightedEdgeIds,
+    highlightedLaneIds,
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const markerPrefix = useId().replace(/:/g, "");
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const lastPinchDistance = useRef<number>();
+  const cameraFrame = useRef<number>();
+  const viewportRef = useRef<Viewport>(createViewport({ width: 1000, height: 640 }));
   const [size, setSize] = useState<Size>({ width: 1000, height: 640 });
-  const [viewport, setViewport] = useState<Viewport>(() => createViewport(size));
+  const [viewport, setViewportState] = useState<Viewport>(viewportRef.current);
+  const setViewport = useCallback((next: Viewport | ((current: Viewport) => Viewport)) => {
+    setViewportState((current) => {
+      const value = typeof next === "function" ? next(current) : next;
+      viewportRef.current = value;
+      return value;
+    });
+  }, []);
   const [selectedNodeId, setSelectedNodeId] = useState<string>();
   const [activeStageId, setActiveStageId] = useState<string>();
   const [activeLaneId, setActiveLaneId] = useState<string>();
@@ -165,35 +191,72 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
     setActiveStageId(undefined);
     setActiveLaneId(undefined);
   }, []);
-  const fit = useCallback(() => {
-    setViewport(fitBounds(result.bounds, size, { padding: 42, minZoom: FIT_MIN_ZOOM, maxZoom: 1.25 }));
-    clearFocus();
-  }, [clearFocus, result.bounds, size]);
-  const reset = useCallback(() => {
-    setViewport(createViewport(size));
-    clearFocus();
-  }, [clearFocus, size]);
+  const cancelCameraTransition = useCallback(() => {
+    if (cameraFrame.current !== undefined) cancelAnimationFrame(cameraFrame.current);
+    cameraFrame.current = undefined;
+  }, []);
+  const moveCamera = useCallback(
+    (target: Viewport, options: CameraTransitionOptions = {}) => {
+      cancelCameraTransition();
+      const duration = Math.max(0, options.duration ?? 0);
+      if (duration === 0 || options.signal?.aborted) {
+        if (!options.signal?.aborted) setViewport(target);
+        return;
+      }
+      const start = viewportRef.current;
+      const startedAt = performance.now();
+      const update = (now: number) => {
+        if (options.signal?.aborted) return cancelCameraTransition();
+        const raw = Math.min(1, (now - startedAt) / duration);
+        const amount =
+          options.easing === "linear" ? raw : raw < 0.5 ? 2 * raw * raw : 1 - Math.pow(-2 * raw + 2, 2) / 2;
+        setViewport({
+          x: start.x + (target.x - start.x) * amount,
+          y: start.y + (target.y - start.y) * amount,
+          zoom: start.zoom + (target.zoom - start.zoom) * amount,
+        });
+        if (raw < 1) cameraFrame.current = requestAnimationFrame(update);
+        else cameraFrame.current = undefined;
+      };
+      cameraFrame.current = requestAnimationFrame(update);
+    },
+    [cancelCameraTransition, setViewport],
+  );
+  const fit = useCallback(
+    (options?: CameraTransitionOptions) => {
+      moveCamera(fitBounds(result.bounds, size, { padding: 42, minZoom: FIT_MIN_ZOOM, maxZoom: 1.25 }), options);
+      clearFocus();
+    },
+    [clearFocus, moveCamera, result.bounds, size],
+  );
+  const reset = useCallback(
+    (options?: CameraTransitionOptions) => {
+      moveCamera(createViewport(size), options);
+      clearFocus();
+    },
+    [clearFocus, moveCamera, size],
+  );
   const focusStageById = useCallback(
-    (stageId: string) => {
+    (stageId: string, options?: CameraTransitionOptions) => {
       const next = focusStage(result.regions, stageId, size, { padding: 32, minZoom: MIN_ZOOM, maxZoom: 1.2 });
       if (next) {
-        setViewport(next);
+        moveCamera(next, options);
         setActiveStageId(stageId);
         setActiveLaneId(undefined);
       }
     },
-    [result.regions, size],
+    [moveCamera, result.regions, size],
   );
   const focusLaneById = useCallback(
-    (laneId: string) => {
+    (laneId: string, options?: CameraTransitionOptions) => {
       const next = focusLane(result.regions, laneId, size, { padding: 32, minZoom: MIN_ZOOM, maxZoom: 1.2 });
       if (next) {
-        setViewport(next);
+        moveCamera(next, options);
         setActiveLaneId(laneId);
         setActiveStageId(undefined);
       }
     },
-    [result.regions, size],
+    [moveCamera, result.regions, size],
   );
 
   useImperativeHandle(
@@ -203,16 +266,40 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
       resetView: reset,
       focusStage: focusStageById,
       focusLane: focusLaneById,
-      setCamera: (next) =>
-        setViewport({
-          x: Number.isFinite(next.x) ? next.x : 0,
-          y: Number.isFinite(next.y) ? next.y : 0,
-          zoom: clampZoom(next.zoom, { minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM }),
-        }),
-      getCamera: () => viewport,
+      focusNode: (nodeId, options) => {
+        const position = result.positions[nodeId];
+        if (position)
+          moveCamera(
+            fitBounds({ ...position, ...result.nodeSize }, size, { padding: 100, minZoom: MIN_ZOOM, maxZoom: 1.35 }),
+            options,
+          );
+      },
+      setCamera: (next, options) =>
+        moveCamera(
+          {
+            x: Number.isFinite(next.x) ? next.x : 0,
+            y: Number.isFinite(next.y) ? next.y : 0,
+            zoom: clampZoom(next.zoom, { minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM }),
+          },
+          options,
+        ),
+      getCamera: () => viewportRef.current,
+      cancelCameraTransition,
     }),
-    [fit, focusLaneById, focusStageById, reset, viewport],
+    [
+      cancelCameraTransition,
+      fit,
+      focusLaneById,
+      focusStageById,
+      moveCamera,
+      reset,
+      result.nodeSize,
+      result.positions,
+      size,
+    ],
   );
+
+  useEffect(() => () => cancelCameraTransition(), [cancelCameraTransition]);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -228,7 +315,7 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
     const observer = new ResizeObserver(update);
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [setViewport]);
 
   useEffect(() => {
     fit();
@@ -238,18 +325,25 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
     clearFocus();
   }, [clearFocus, graph.id]);
 
+  const beginManualInteraction = useCallback(() => {
+    cancelCameraTransition();
+    clearFocus();
+    onManualCameraInteraction?.();
+  }, [cancelCameraTransition, clearFocus, onManualCameraInteraction]);
+
   const zoom = useCallback(
     (factor: number, anchor = { x: size.width / 2, y: size.height / 2 }) => {
-      clearFocus();
+      beginManualInteraction();
       setViewport((current) =>
         zoomAt(current, current.zoom * factor, anchor, { minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM }),
       );
     },
-    [clearFocus, size],
+    [beginManualInteraction, setViewport, size],
   );
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    clearFocus();
+    if ((event.target as HTMLElement).closest("button, input, [role='combobox']")) return;
+    beginManualInteraction();
     event.currentTarget.setPointerCapture(event.pointerId);
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
   };
@@ -283,13 +377,21 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
   const selectNode = useCallback(
     (node: EvolutionNode) => {
       setSelectedNodeId(node.id);
+      onNodeSelectionChange?.(node.id);
       onNodeClick?.(node);
     },
-    [onNodeClick],
+    [onNodeClick, onNodeSelectionChange],
   );
 
   const worldTransform = `translate(${viewport.x} ${viewport.y}) scale(${viewport.zoom})`;
   const selectedNode = selectedNodeId ? nodeById.get(selectedNodeId) : undefined;
+  const routes = useMemo(
+    () =>
+      routeEdges(graph.edges, result.positions, result.nodeSize, layout === "vertical-dag" ? "vertical" : "horizontal"),
+    [graph.edges, layout, result.nodeSize, result.positions],
+  );
+  const edgeById = useMemo(() => new Map(graph.edges.map((edge) => [edge.id, edge])), [graph.edges]);
+  const hasHighlight = Boolean(highlightedNodeIds?.size || highlightedLaneIds?.size);
 
   return (
     <section className="graph-mode" aria-label={`${graph.title} graph`}>
@@ -339,10 +441,10 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
             <Button aria-label="Zoom in" icon={<PlusOutlined />} onClick={() => zoom(1.15)} />
           </Tooltip>
           <Tooltip title="Fit to view">
-            <Button aria-label="Fit to view" icon={<CompressOutlined />} onClick={fit} />
+            <Button aria-label="Fit to view" icon={<CompressOutlined />} onClick={() => fit()} />
           </Tooltip>
           <Tooltip title="Reset view">
-            <Button aria-label="Reset view" icon={<ReloadOutlined />} onClick={reset} />
+            <Button aria-label="Reset view" icon={<ReloadOutlined />} onClick={() => reset()} />
           </Tooltip>
           <span className="graph-toolbar__zoom">{Math.round(viewport.zoom * 100)}%</span>
         </Space>
@@ -365,7 +467,7 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
         onPointerMove={onPointerMove}
         onPointerUp={releasePointer}
         onPointerCancel={releasePointer}
-        onDoubleClick={fit}
+        onDoubleClick={() => fit()}
       >
         <svg className="graph-canvas" width="100%" height="100%" role="img" aria-label="Interactive evolution graph">
           <defs>
@@ -404,25 +506,21 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
                   height={region.height}
                 />
               ))}
-            {graph.edges.map((edge) => {
-              const source = result.positions[edge.source];
-              const target = result.positions[edge.target];
-              if (!source || !target) return null;
-              const vertical =
-                layout === "vertical-dag" || Math.abs(target.y - source.y) > Math.abs(target.x - source.x) * 1.4;
-              const ports = edgePorts(source, target, result.nodeSize, vertical);
-              const distance = vertical
-                ? Math.abs(ports.target.y - ports.source.y)
-                : Math.abs(ports.target.x - ports.source.x);
-              const bend = Math.max(32, distance * 0.35);
-              const path = vertical
-                ? `M ${ports.source.x} ${ports.source.y} C ${ports.source.x} ${ports.source.y + Math.sign(ports.target.y - ports.source.y) * bend}, ${ports.target.x} ${ports.target.y - Math.sign(ports.target.y - ports.source.y) * bend}, ${ports.target.x} ${ports.target.y}`
-                : `M ${ports.source.x} ${ports.source.y} C ${ports.source.x + Math.sign(ports.target.x - ports.source.x) * bend} ${ports.source.y}, ${ports.target.x - Math.sign(ports.target.x - ports.source.x) * bend} ${ports.target.y}, ${ports.target.x} ${ports.target.y}`;
+            {routes.map((route) => {
+              const edge = edgeById.get(route.id)!;
+              if (visibleEdgeIds && !visibleEdgeIds.has(edge.id)) return null;
+              const sourceLaneId = nodeById.get(edge.source)?.laneId;
+              const targetLaneId = nodeById.get(edge.target)?.laneId;
+              const laneHighlighted =
+                (sourceLaneId !== undefined && highlightedLaneIds?.has(sourceLaneId)) ||
+                (targetLaneId !== undefined && highlightedLaneIds?.has(targetLaneId));
+              const highlighted = (highlightedEdgeIds?.has(edge.id) ?? false) || Boolean(laneHighlighted);
               return (
                 <path
                   key={edge.id}
-                  className={edgeClass(edge.type)}
-                  d={path}
+                  data-edge-id={edge.id}
+                  className={`${edgeClass(edge.type)}${highlighted ? " is-highlighted" : ""}${hasHighlight && !highlighted ? " is-dimmed" : ""}`}
+                  d={route.path}
                   markerEnd={edge.type === "related" ? undefined : `url(#${markerPrefix}-${edge.type})`}
                 />
               );
@@ -436,7 +534,8 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
         >
           {graph.nodes.map(
             (node) =>
-              result.positions[node.id] && (
+              result.positions[node.id] &&
+              (!visibleNodeIds || visibleNodeIds.has(node.id)) && (
                 <GraphNodeCard
                   key={node.id}
                   node={node}
@@ -448,6 +547,13 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
                   position={result.positions[node.id]}
                   size={result.nodeSize}
                   selected={selectedNodeId === node.id}
+                  newlyRevealed={newNodeIds?.has(node.id) ?? false}
+                  highlighted={highlightedNodeIds?.has(node.id) ?? highlightedLaneIds?.has(node.laneId ?? "") ?? false}
+                  dimmed={
+                    hasHighlight &&
+                    !(highlightedNodeIds?.has(node.id) ?? false) &&
+                    !(highlightedLaneIds?.has(node.laneId ?? "") ?? false)
+                  }
                   onSelect={selectNode}
                 />
               ),
@@ -464,8 +570,8 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
                   <button
                     key={stage.id}
                     type="button"
-                    aria-pressed={activeStageId === stage.id}
-                    className={activeStageId === stage.id ? "is-active" : ""}
+                    aria-pressed={activeStageId === stage.id || playbackStageId === stage.id}
+                    className={`${activeStageId === stage.id || playbackStageId === stage.id ? "is-active" : ""}${playbackStageId && playbackStageId !== stage.id ? " is-pending" : ""}`}
                     style={{ left: viewport.x + region.x * viewport.zoom, width: region.width * viewport.zoom }}
                     onClick={() => focusStageById(stage.id)}
                     title={stage.description}
@@ -511,7 +617,10 @@ export const GraphRenderer = forwardRef<GraphRendererHandle, GraphRendererProps>
               size="small"
               type="text"
               icon={<EyeOutlined />}
-              onClick={() => setSelectedNodeId(undefined)}
+              onClick={() => {
+                setSelectedNodeId(undefined);
+                onNodeSelectionChange?.(undefined);
+              }}
               aria-label="Close node details"
             />
             <strong>

@@ -215,6 +215,28 @@ body {
   font-size: 12px;
 }
 
+.evolution-tools {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid rgba(124, 140, 255, 0.2);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: rgba(13, 17, 36, 0.92);
+}
+.playback-controls {
+  display: grid;
+  grid-template-columns: auto minmax(160px, 1fr) 84px minmax(100px, auto);
+  align-items: center;
+  gap: 12px;
+}
+.playback-progress {
+  color: #c5cceb;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 .app-footer {
   text-align: center;
   padding: 16px 24px;
@@ -247,6 +269,18 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content-wrapper {
+    animation: none;
+  }
+  .app-layout,
+  .app-header,
+  .controls-card,
+  .app-footer {
+    transition: none;
   }
 }
 
