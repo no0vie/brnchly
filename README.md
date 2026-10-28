@@ -231,10 +231,11 @@ npm run profile:chromium
 - Current production output: app JavaScript **207.82 kB** (**65.61 kB gzip**), Ant Design **831.32 kB** (**264.34 kB gzip**), React shim **0.07 kB** (**0.09 kB gzip**), and CSS **17.97 kB** (**4.58 kB gzip**).
 - Recorded pre-Phase-4 baseline: app JavaScript **167.34 kB** (**53.34 kB gzip**) plus Ant Design **831.32 kB** (**264.34 kB gzip**).
 - The current app chunk is therefore 40.48 kB larger minified and 12.27 kB larger gzip than that baseline; the Ant Design chunk is unchanged. Vite still warns that the Ant Design chunk exceeds 500 kB.
-- The initial full `npm audit` reported **44 development-toolchain advisories**. After aligning `typescript-eslint` with TypeScript 5.9, the current audit reports **43 dev-only advisories**: 4 moderate, 36 high, and 3 critical; `npm audit --omit=dev` reports **0 production vulnerabilities**. Remaining findings are transitive test/build tooling and have no non-breaking automated fix reported by npm.
+- The current full `npm audit` reports **13 development-toolchain advisories**: 5 moderate, 6 high, and 2 critical; `npm audit --omit=dev` reports **0 production vulnerabilities**. The critical findings are in the Vitest `tinypool` dependency and require a controlled breaking toolchain upgrade rather than `npm audit fix --force`.
 - `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser` are aligned on v8, removing the previous unsupported TypeScript-version warning. The profiling script is non-gating.
-- A deterministic Playwright browser harness exists for 100/500/1,000-node graphs, but the current-environment run produced no baseline: the initial bounded run was stopped and a retry timed out while Chromium was creating a page. Timing, frame, long-task, React-commit, and memory results are unavailable—not zero.
-- Browser/E2E success is not claimed. The Phase 4 Playwright spec exists, but it was not established as passing for this documentation update.
+- The Chromium `newPage()` hang was isolated to the Zed terminal's macOS Mach-service sandbox. The same Playwright reproduction and application tests run successfully outside that sandbox.
+- Existing editor, export, legacy smoke, and reduced-motion-project specs pass in real bundled Chromium. A 100/500/1,000-node baseline now exists under `artifacts/performance/`; lane highlighting and 500/1,000-node frame/long-task measurements require optimization.
+- Phase 4.7 is **not accepted**: several mandatory drag, multi-select, storage-failure, import, keyboard, focus, and manual accessibility scenarios remain unexecuted. See [docs/phase-4.7-acceptance.md](docs/phase-4.7-acceptance.md).
 
 See [docs/performance.md](docs/performance.md) for the browser-harness methodology and exact limitations. Node/Vitest algorithm benchmarks are not browser-rendering measurements.
 
@@ -249,7 +250,7 @@ See [docs/performance.md](docs/performance.md) for the browser-harness methodolo
 - Canvas multi-selection gestures are not implemented; use the structure list. Group drag requires selected nodes to already have manual positions.
 - Visual node drag is Manual-layout-only. There is no stage/lane drag-and-drop reordering UI despite reorder commands in the core.
 - Connection handles are pointer-oriented; the Add Edge form is the non-drag alternative.
-- No virtualization is implemented. Browser performance at 100/500/1,000 nodes has no current measured baseline because the harness run hung.
+- No virtualization is implemented. The current browser baseline shows lane-highlight p95 of 457.0/773.1/1079.5 ms at 100/500/1,000 nodes and frame p95 of 99.9/233.3 ms at 500/1,000 nodes.
 - HTML nodes plus SVG edges favor accessibility and straightforward theming, but very large graphs may require virtualization or another rendering strategy.
 - Edge routing does not globally avoid nodes or bundle edges.
 - Ant Design remains the largest production chunk, and the app chunk increased with Phase 4 work.

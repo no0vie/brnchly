@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-10-28T20:58:58.963Z",
+  "methodology": {
+    "samplesPerGraph": 3,
+    "percentile": "nearest-rank p95",
+    "reducedMotion": true
+  },
+  "environment": {
+    "browserName": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "headless": true,
+    "os": "Darwin 25.6.0 arm64",
+    "cpuCount": 10,
+    "totalMemoryBytes": 34359738368,
+    "nodeVersion": "v24.16.0"
+  }
+}

@@ -30,6 +30,15 @@ async function browserClick(page: Page, ariaLabel: string) {
   }, ariaLabel);
 }
 
+async function browserRoleClick(page: Page, name: RegExp) {
+  return page.getByRole("button", { name }).evaluate(async (element: HTMLButtonElement) => {
+    const start = performance.now();
+    element.click();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    return performance.now() - start;
+  });
+}
+
 async function browserTextClick(page: Page, text: string) {
   return page.evaluate(async (label) => {
     const element = [...document.querySelectorAll<HTMLElement>("button")].find(
@@ -135,7 +144,7 @@ test.describe("reproducible Chromium graph profiling", () => {
           }),
         );
 
-        samples.dependencyHighlight.push(await browserClick(page, "Performance node 0. Status: mastered"));
+        samples.dependencyHighlight.push(await browserRoleClick(page, /^Node 0\. Status:/));
         await expect(page.getByRole("combobox", { name: "Dependency highlight mode" })).toBeVisible();
         await page.getByRole("button", { name: "Close node details" }).click();
 

@@ -12,11 +12,15 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "chromium-reduced-motion", use: { ...devices["Desktop Chrome"], reducedMotion: "reduce" } },
+    {
+      name: "chromium-reduced-motion",
+      testIgnore: "performance.spec.ts",
+      use: { ...devices["Desktop Chrome"], reducedMotion: "reduce" },
+    },
   ],
   webServer: {
     command: "npm run dev -- --host 127.0.0.1 --port 4173",
     url: "http://127.0.0.1:4173",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
   },
 });

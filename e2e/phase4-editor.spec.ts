@@ -10,8 +10,9 @@ const runtimeErrors = (page: Page) => {
 };
 
 const openEmptyEditor = async (page: Page) => {
-  await page.addInitScript(() => window.localStorage.clear());
   await page.goto("/");
+  await page.evaluate(() => window.localStorage.clear());
+  await page.reload();
   await page.getByText("Editor Mode", { exact: true }).click();
   await expect(page.getByRole("region", { name: "Universal graph editor" })).toBeVisible();
   await page.getByRole("button", { name: "New document" }).click();
@@ -39,7 +40,7 @@ const addEdge = async (page: Page, id: string, source: string, target: string) =
   await page.getByRole("textbox", { name: "Edge id" }).fill(id);
   await page.getByLabel("Source").selectOption(source);
   await page.getByLabel("Target").selectOption(target);
-  await page.getByLabel("Edge type").selectOption("dependency");
+  await page.getByLabel("Edge type", { exact: true }).selectOption("dependency");
   await page.getByRole("button", { name: "Create edge" }).click();
 };
 

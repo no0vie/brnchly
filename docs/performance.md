@@ -59,9 +59,13 @@ A miss should trigger trace/manual DevTools investigation, not fail CI automatic
 
 ## Current-environment run (2026-10-28)
 
-Environment: macOS sandbox, Playwright headless Chromium, one worker. `npm run build` and the focused deterministic generator tests passed.
+Environment: macOS 25.6.0 arm64, Node 24.16.0, Playwright 1.64.1, bundled headless Chromium 156.0.8078.4, one worker, reduced motion, and three samples per graph.
 
-Browser profiling did **not** complete in this environment. The initial run was forcibly stopped at the external 10-minute command bound; a bounded two-sample retry (`PERF_SAMPLES=2 npm run profile:chromium`) then hit the spec's 600,000 ms timeout while Chromium was creating a page after the earlier terminated process. No complete JSON artifact was produced and no timing, long-task, frame, React, or memory values are reported here. These values are **unavailable**, not zero. Run the command in a clean local process environment to establish the first browser baseline.
+The previous `newPage()` hang was reproduced only inside the Zed terminal OS sandbox. Chromium stderr reported a denied macOS Mach rendezvous registration (`bootstrap_check_in … Permission denied (1100)`). The identical reproduction and full profile completed outside that sandbox without adding unsafe project launch flags.
+
+`npm run profile:chromium` completed for 100, 500, and 1,000 nodes. Raw data is stored in `artifacts/performance/graph-*.json`; environment metadata is in `artifacts/performance/environment.json`, and the readable table is in `artifacts/performance/summary.md`.
+
+The revalidated baseline identifies lane highlighting as the dominant bottleneck (p95 457.0/773.1/1079.5 ms). Frame p95 is 16.8/99.9/233.3 ms and long-task p95 is unavailable because none were observed / 123 / 325 ms. These results do not meet the preliminary interaction/frame targets at larger sizes. No performance target is claimed as achieved.
 
 ## Limitations
 
