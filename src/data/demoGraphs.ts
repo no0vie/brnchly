@@ -1,4 +1,4 @@
-import type { EvolutionGraph } from "../domain/evolutionGraph";
+import type { EvolutionGraph } from "@no0vie/brnchly-core";
 
 const branch = { id: "main", title: "Evolution", color: "#7c8cff" };
 

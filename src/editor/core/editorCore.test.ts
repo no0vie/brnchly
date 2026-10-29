@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { serializeEvolutionGraph, type EvolutionGraph } from "../../domain/evolutionGraph";
+import { serializeEvolutionGraph, type EvolutionGraph } from "@no0vie/brnchly-core";
 import { applyGraphCommand, createGraphHistory, executeGraphCommand, redo, undo } from "./index";
 
 const graph = (): EvolutionGraph => ({

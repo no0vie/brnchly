@@ -5,10 +5,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { GraphRendererHandle } from "./GraphRenderer";
+import type { GraphRendererHandle } from "@no0vie/brnchly-react";
 import { threeLaneEvolution } from "../data/demoGraphs";
 import { EvolutionGraphView } from "./EvolutionGraphView";
-import { GraphRenderer } from "./GraphRenderer";
+import { GraphRenderer } from "@no0vie/brnchly-react";
 
 class ResizeObserverMock {
   observe() {}

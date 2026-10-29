@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { EvolutionGraph } from "../../domain/evolutionGraph";
+import type { EvolutionGraph } from "@no0vie/brnchly-core";
 import { UniversalEditor } from "./UniversalEditor";
 
 vi.mock("../../renderer", () => ({
@@ -13,6 +13,9 @@ vi.mock("../../renderer", () => ({
       {graph.title}:{graph.nodes.length}
     </div>
   ),
+}));
+
+vi.mock("@no0vie/brnchly-react", () => ({
   GraphRenderer: ({
     graph,
     onNodePositionCommit,
@@ -233,6 +236,71 @@ describe("UniversalEditor", () => {
     expect(screen.getByRole("region", { name: "Graph structure" })).toHaveTextContent("two → one");
     await user.click(screen.getByRole("button", { name: "Commit invalid visual connection" }));
     expect(screen.getByRole("region", { name: "Validation issues" })).toHaveTextContent(/cycle|dependency/i);
+  });
+
+  it("restores focus to the add trigger after cancelling or completing an add form", async () => {
+    const user = await openEditor();
+    await user.click(screen.getByRole("button", { name: "New document" }));
+    const addBranch = screen.getByRole("button", { name: "Add branch" });
+
+    addBranch.focus();
+    await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(addBranch).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+    await user.type(screen.getByLabelText("Branch id"), "keyboard-branch");
+    await user.type(screen.getByLabelText("Branch title"), "Keyboard branch");
+    await user.click(screen.getByRole("button", { name: "Create branch" }));
+    expect(addBranch).toHaveFocus();
+  });
+
+  it("follows the inspector's basic keyboard focus order", async () => {
+    const user = await openEditor();
+    await user.click(screen.getByRole("button", { name: "New document" }));
+    await user.click(screen.getByRole("button", { name: "Add branch" }));
+    await user.type(screen.getByLabelText("Branch id"), "branch");
+    await user.type(screen.getByLabelText("Branch title"), "Branch");
+    await user.click(screen.getByRole("button", { name: "Create branch" }));
+    await user.click(screen.getByRole("button", { name: /^Branch branch$/ }));
+
+    const inspector = screen.getByRole("complementary", { name: "Inspector" });
+    const title = within(inspector).getByLabelText("Title");
+    title.focus();
+    await user.tab();
+    expect(within(inspector).getByLabelText("Description")).toHaveFocus();
+    await user.tab();
+    expect(within(inspector).getByLabelText("Color")).toHaveFocus();
+    await user.tab();
+    expect(within(inspector).getByRole("button", { name: "Save changes" })).toHaveFocus();
+  });
+
+  it("creates an edge with the keyboard form alternative", async () => {
+    const user = await openEditor();
+    await user.click(screen.getByRole("button", { name: "New document" }));
+    await user.click(screen.getByRole("button", { name: "Add branch" }));
+    await user.type(screen.getByLabelText("Branch id"), "branch");
+    await user.type(screen.getByLabelText("Branch title"), "Branch");
+    await user.click(screen.getByRole("button", { name: "Create branch" }));
+    for (const id of ["one", "two"]) {
+      await user.click(screen.getByRole("button", { name: "Add node" }));
+      await user.type(screen.getByLabelText("Node id"), id);
+      await user.type(screen.getByLabelText("Node title"), id);
+      await user.selectOptions(screen.getByLabelText("Branch"), "branch");
+      await user.click(screen.getByRole("button", { name: "Create node" }));
+    }
+
+    const addEdge = screen.getByRole("button", { name: "Add edge" });
+    addEdge.focus();
+    await user.keyboard("{Enter}");
+    await user.type(screen.getByLabelText("Edge id"), "keyboard-edge");
+    await user.selectOptions(screen.getByLabelText("Source"), "one");
+    await user.selectOptions(screen.getByLabelText("Target"), "two");
+    screen.getByRole("button", { name: "Create edge" }).focus();
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByRole("button", { name: /^one → two keyboard-edge$/ })).toBeInTheDocument();
+    expect(addEdge).toHaveFocus();
   });
 
   it("does not intercept editor shortcuts while typing", async () => {

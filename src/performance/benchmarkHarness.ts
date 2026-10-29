@@ -1,7 +1,7 @@
-import { createPlaybackPlan, snapshotAt } from "../graph/playback/plan";
-import { routeEdges } from "../graph/routing";
-import { createGraphIndex, traverseGraph } from "../graph/traversal";
-import { layoutGraph } from "../layout";
+import { createPlaybackPlan, snapshotAt } from "@no0vie/brnchly-core";
+import { routeEdges } from "@no0vie/brnchly-core";
+import { createGraphIndex, traverseGraph } from "@no0vie/brnchly-core";
+import { layoutGraph } from "@no0vie/brnchly-core";
 import { generatePerformanceGraph, type PerformanceGraphSize } from "./graphGenerator";
 
 export const ALGORITHMIC_ENVIRONMENT = "Node/Vitest algorithmic (NOT browser measurement)" as const;

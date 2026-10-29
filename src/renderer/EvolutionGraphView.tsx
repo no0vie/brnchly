@@ -1,18 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Select, Space } from "antd";
 import SporeGraphAntd from "../components/SporeGraphAntd";
-import { GraphRenderer, type GraphRendererHandle } from "./GraphRenderer";
+import { GraphRenderer, type GraphRendererHandle } from "@no0vie/brnchly-react";
 import { PlaybackControls } from "../components/playback/PlaybackControls";
 import { usePlayback } from "../components/playback/usePlayback";
 import { useReducedMotion } from "../components/playback/useReducedMotion";
-import { createGraphIndex, traverseGraph, type TraversalMode } from "../graph/traversal";
+import { createGraphIndex, traverseGraph, type TraversalMode } from "@no0vie/brnchly-core";
 import type {
   EvolutionGraph,
   EvolutionGraphMode,
   EvolutionGraphTheme,
   EvolutionLayoutStrategy,
   EvolutionNode,
-} from "../domain/evolutionGraph";
+} from "@no0vie/brnchly-core";
 import { toClassicGraphData } from "./classicAdapter";
 
 export interface EvolutionGraphViewProps {

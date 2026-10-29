@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EvolutionGraph } from "../domain/evolutionGraph";
+import type { EvolutionGraph } from "@no0vie/brnchly-core";
 import { toClassicGraphData } from "./classicAdapter";
 
 const graph: EvolutionGraph = {

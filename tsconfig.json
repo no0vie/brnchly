@@ -29,6 +29,14 @@
       "@data/*": ["src/data/*"]
     }
   },
-  "include": ["src"],
+  "include": [
+    "src",
+    "packages/react/src/GraphRenderer.interactions.test.tsx",
+    "packages/react/src/GraphToolbar.tsx",
+    "packages/react/src/constants.ts",
+    "packages/react/src/GraphNodeCard.tsx",
+    "packages/react/src/types.ts",
+    "packages/react/src/GraphRenderer.tsx"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

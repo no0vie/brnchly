@@ -3,7 +3,7 @@ import {
   type EvolutionGraph,
   type EvolutionGraphValidationResult,
   type EvolutionNode,
-} from "../../domain/evolutionGraph";
+} from "@no0vie/brnchly-core";
 import type { GraphCommand, ReferencedEntityDeletePolicy } from "./commands";
 
 export interface GraphHistoryData {

@@ -7,7 +7,7 @@ import {
   StepBackwardOutlined,
   StepForwardOutlined,
 } from "@ant-design/icons";
-import type { PlaybackSnapshot } from "../../graph/playback";
+import type { PlaybackSnapshot } from "@no0vie/brnchly-core";
 
 interface PlaybackControlsProps {
   snapshot: PlaybackSnapshot;

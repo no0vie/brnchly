@@ -1,11 +1,13 @@
 # Chromium graph performance profiling
 
+This remains the canonical performance document for Phase 5. The retained development artifacts are unchanged, and the separately generated production-preview artifact is documented below.
+
 The repository has two intentionally separate performance layers:
 
 - `src/performance/benchmarks.test.ts` profiles graph algorithms in Node/Vitest. Those numbers do **not** represent browser rendering.
 - `e2e/performance.spec.ts` profiles the real React/SVG graph in Playwright Chromium through the isolated `?perf=100|500|1000` harness.
 
-Neither suite enforces timing gates. Performance varies substantially by hardware, browser build, thermal state, headless mode, and background load.
+Neither suite enforces timing gates, and the general CI workflow does not run performance profiling. Performance varies substantially by hardware, browser build, thermal state, headless mode, and background load.
 
 ## Run
 
@@ -19,7 +21,7 @@ The default is three samples for each deterministic 100, 500, and 1,000-node gra
 PERF_SAMPLES=10 npm run profile:chromium
 ```
 
-The test uses only the `chromium` Playwright project, one worker, a 1440 × 900 viewport, reduced motion, and a fresh browser context per graph size. Playwright starts the existing Vite server according to `playwright.config.ts`. For release baselines, change that configuration to serve the production build or run an equivalent controlled preview; development React/Profiler overhead means the default command is best for reproducibility and regression comparison, not end-user absolute latency.
+The test uses only the `chromium` Playwright project, one worker, a 1440 × 900 viewport, reduced motion, and a fresh browser context per graph size. Playwright starts the existing Vite server according to `playwright.config.ts`. For release baselines, use `npm run profile:production`, which builds the application and serves it through `vite preview` using `playwright.production.config.ts`. Development React/Profiler overhead means the default command is best for comparison with the retained development baseline, not end-user absolute latency.
 
 On success, Playwright attaches `performance-report.json` under that run's `test-results/` output directory. The JSON contains raw samples, median, nearest-rank p95, node/edge counts, Chromium version, headless status, OS/architecture, CPU count, host memory, Node version, user agent, viewport methodology, and support status for optional APIs.
 
@@ -57,11 +59,23 @@ Establish a baseline on a dedicated machine before adopting budgets. Reasonable 
 
 A miss should trigger trace/manual DevTools investigation, not fail CI automatically. The harness intentionally has no timing assertions.
 
+## Production-preview baseline (2026-10-29)
+
+`artifacts/performance/phase-5-production-preview.json` records a production-build preview run. It is separate from the Vite development-server baseline below and must not be compared as though the environments were equivalent. The run used three samples per deterministic graph, nearest-rank p95, one worker, reduced motion, Node 24.16.0, and bundled headless Chromium 156.0.8078.4 on macOS 25.6.0 arm64. Memory is the end-of-scenario Chromium `usedJSHeapSize` point sample, shown in decimal MB.
+
+| Nodes | Initial p95 (ms) | Dependency p95 (ms) | Lane p95 (ms) | Playback p95 (ms) | Frame p95 (ms) | Long task p95 (ms) | Memory (MB) |
+| ----: | ---------------: | ------------------: | ------------: | ----------------: | -------------: | -----------------: | ----------: |
+|   100 |            103.2 |                25.0 |          29.3 |              29.0 |           16.8 |      none observed |        13.4 |
+|   500 |            138.7 |               134.0 |          22.4 |             118.4 |          116.7 |              113.0 |        31.2 |
+| 1,000 |            174.4 |                44.2 |          30.8 |              46.0 |          250.0 |              257.0 |        68.0 |
+
+These measurements are factual snapshots, not CI gates or compatibility guarantees. Three samples are sensitive to scheduler, thermal, browser, and host variability; rerun under controlled conditions before drawing regression conclusions. The performance benchmark remains omitted from general CI.
+
 ## Phase 4.8 release-candidate run (2026-10-29)
 
 The Phase 4.8 profile isolates lane option selection from Ant dropdown opening and removes the mass grayscale filter from dimmed nodes. Final lane-highlight median/p95 is 30.5/31.1 ms at 100 nodes, 128.5/239.2 ms at 500 nodes, and 157.6/162.4 ms at 1,000 nodes. The 100- and 1,000-node p95 targets are met; the 500-node p95 target is missed because of one 239.2 ms sample despite a 128.5 ms median.
 
-Aggregate frame p95 remains 33.2/83.3/216.8 ms, so large-graph frame variability remains a documented limitation. The full before/after table and raw final report are in `artifacts/performance/summary.md` and `artifacts/performance/phase-4.8-after.json`.
+Aggregate frame p95 remains 33.2/83.3/216.8 ms, so large-graph frame variability remains a documented limitation. The full before/after table and raw final report are in `artifacts/performance/summary.md` and `artifacts/performance/phase-4.8-after.json`. The Phase 4.8 report’s statement that a production-preview profile had not run was accurate when that historical report was written; the newer production-preview baseline above supersedes that run-status statement without rewriting the historical report.
 
 ## Previous current-environment run (2026-10-28)
 

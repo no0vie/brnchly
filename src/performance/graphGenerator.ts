@@ -1,4 +1,4 @@
-import type { EvolutionEdgeType, EvolutionGraph, NodeStatus } from "../domain/evolutionGraph/types";
+import type { EvolutionEdgeType, EvolutionGraph, NodeStatus } from "@no0vie/brnchly-core";
 
 export const GRAPH_SIZES = [100, 500, 1000] as const;
 export type PerformanceGraphSize = (typeof GRAPH_SIZES)[number];

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { EvolutionGraph } from "../../domain/evolutionGraph";
+import type { EvolutionGraph } from "@no0vie/brnchly-core";
 import { AutosaveController, DocumentPersistenceError, LocalDocumentService, type StorageLike } from "./index";
 
 const graph = (id = "graph-1", title = "Graph One"): EvolutionGraph => ({

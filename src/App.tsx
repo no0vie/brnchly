@@ -8,7 +8,7 @@ import {
   migrateLegacyEvolutionData,
   type EvolutionGraphMode,
   type EvolutionLayoutStrategy,
-} from "./domain/evolutionGraph";
+} from "@no0vie/brnchly-core";
 import { sampleItems } from "./data/sampleData";
 import { demoGraphs } from "./data/demoGraphs";
 import { useTheme } from "./contexts/theme";

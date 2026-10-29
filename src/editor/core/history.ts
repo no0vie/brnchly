@@ -1,4 +1,4 @@
-import { validateEvolutionGraph, type EvolutionGraph } from "../../domain/evolutionGraph";
+import { validateEvolutionGraph, type EvolutionGraph } from "@no0vie/brnchly-core";
 import { applyGraphCommand, type ApplyGraphCommandResult, type GraphHistoryData } from "./apply";
 import type { GraphCommand } from "./commands";
 

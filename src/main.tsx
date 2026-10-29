@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { ThemeProvider } from "./contexts/theme";
 import ThemeAwareConfigProvider from "./components/ThemeAwareConfigProvider";
 import App from "./App";
+import "@no0vie/brnchly-react/styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

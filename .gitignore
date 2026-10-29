@@ -13,8 +13,10 @@ dist-ssr
 *.local
 .eslintcache
 playwright-report
+playwright-report-production
 blob-report
 test-results
+test-results-production
 
 # Editor directories and files
 .vscode/*

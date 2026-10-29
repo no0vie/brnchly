@@ -1,4 +1,4 @@
-import type { EvolutionGraph } from "../domain/evolutionGraph";
+import type { EvolutionGraph } from "@no0vie/brnchly-core";
 import type { EvolutionStep, GraphItem } from "../types";
 
 const statusDifficulty: Record<EvolutionGraph["nodes"][number]["status"], number> = {

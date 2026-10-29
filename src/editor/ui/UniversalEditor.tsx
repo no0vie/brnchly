@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { EvolutionGraphView, GraphRenderer } from "../../renderer";
+import { GraphRenderer } from "@no0vie/brnchly-react";
+import { EvolutionGraphView } from "../../renderer";
 import type {
   EvolutionEdgeType,
   EvolutionGraph,
   EvolutionGraphTheme,
   EvolutionLayoutStrategy,
   NodeStatus,
-} from "../../domain/evolutionGraph";
+} from "@no0vie/brnchly-core";
 import {
   createGraphHistory,
   executeGraphCommand,
@@ -79,8 +80,15 @@ export const UniversalEditor: React.FC<UniversalEditorProps> = ({ theme }) => {
   const [storageError, setStorageError] = useState<string>();
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus<EvolutionGraph>>({ status: "saved" });
   const fileRef = useRef<HTMLInputElement>(null);
+  const addTriggerRef = useRef<HTMLButtonElement>();
+  const previousAddingRef = useRef<EntityKind>();
   const currentDocumentRef = useRef<string>();
   const layoutRef = useRef(layout);
+
+  useEffect(() => {
+    if (previousAddingRef.current && !adding) addTriggerRef.current?.focus();
+    previousAddingRef.current = adding;
+  }, [adding]);
 
   const refreshDocuments = useCallback(() => {
     try {
@@ -452,7 +460,8 @@ export const UniversalEditor: React.FC<UniversalEditorProps> = ({ theme }) => {
                         {view === "edit" && (
                           <button
                             aria-label={`Add ${kind}`}
-                            onClick={() => {
+                            onClick={(event) => {
+                              addTriggerRef.current = event.currentTarget;
                               setAdding(kind);
                               setSelected([]);
                             }}

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PlaybackController, nextStageCheckpoint, previousStageCheckpoint } from "../../graph/playback";
-import type { EvolutionGraph } from "../../domain/evolutionGraph";
-import type { PlaybackCameraMode, PlaybackSnapshot } from "../../graph/playback";
+import { PlaybackController, nextStageCheckpoint, previousStageCheckpoint } from "@no0vie/brnchly-core";
+import type { EvolutionGraph } from "@no0vie/brnchly-core";
+import type { PlaybackCameraMode, PlaybackSnapshot } from "@no0vie/brnchly-core";
 
 export interface PlaybackOptions {
   stageDuration?: number;

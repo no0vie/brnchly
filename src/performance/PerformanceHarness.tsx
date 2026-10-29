@@ -1,6 +1,6 @@
 import React, { Profiler, useEffect, useMemo, useState } from "react";
 import { Button, Space, Typography } from "antd";
-import type { EvolutionGraph } from "../domain/evolutionGraph";
+import type { EvolutionGraph } from "@no0vie/brnchly-core";
 import { EvolutionGraphView } from "../renderer";
 import { generatePerformanceGraph, type PerformanceGraphSize } from "./graphGenerator";
 

@@ -4,7 +4,7 @@ import {
   validateEvolutionGraph,
   type EvolutionGraph,
   type EvolutionGraphV2,
-} from "../../domain/evolutionGraph";
+} from "@no0vie/brnchly-core";
 
 export interface StorageLike {
   readonly length: number;

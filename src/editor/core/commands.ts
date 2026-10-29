@@ -6,7 +6,7 @@ import type {
   EvolutionNode,
   GraphLane,
   GraphStage,
-} from "../../domain/evolutionGraph";
+} from "@no0vie/brnchly-core";
 
 export type ReferencedEntityDeletePolicy =
   { mode: "reject" } | { mode: "reassign"; targetId: string } | { mode: "delete-nodes" };
