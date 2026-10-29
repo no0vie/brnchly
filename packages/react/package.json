@@ -1,0 +1,44 @@
+{
+  "name": "@no0vie/brnchly-react",
+  "version": "1.0.0",
+  "description": "Reusable React graph renderer for brnchly.",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/no0vie/brnchly.git",
+    "directory": "packages/react"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false",
+    "test": "vitest run src"
+  },
+  "dependencies": {
+    "@no0vie/brnchly-core": "1.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=18 <20",
+    "react-dom": ">=18 <20"
+  }
+}
