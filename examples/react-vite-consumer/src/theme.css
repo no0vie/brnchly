@@ -1,0 +1,55 @@
+:root {
+  color-scheme: light dark;
+  font-family: Inter, system-ui, sans-serif;
+  color: #172033;
+  background: #f4f6fb;
+}
+body {
+  margin: 0;
+}
+main {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 24px;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+button {
+  padding: 8px 12px;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #bbc3d3;
+  border-radius: 6px;
+}
+.graph-container {
+  width: 100%;
+  height: 640px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #d9deea;
+  border-radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #edf1fa;
+    background: #111827;
+  }
+  button,
+  .graph-container {
+    background: #1f2937;
+    border-color: #4b5563;
+  }
+}
