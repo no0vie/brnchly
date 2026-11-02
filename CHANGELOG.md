@@ -26,6 +26,6 @@ Release-candidate preparation; not a statement that packages have been published
 - CI and Pages/publishing workflows are prepared but are not claimed to have run or passed.
 - Automated browser coverage is Chromium; Firefox/WebKit and full accessibility conformance are not verified.
 - The editor is not a published package API and uses local browser storage.
-- Large-graph frame and long-task variability remains; see `docs/performance.md`.
+- Large-graph frame and long-task variability remains; see `docs/development.md` and `docs/limitations.md`.
 
 [1.0.0 RC]: https://github.com/no0vie/brnchly/releases

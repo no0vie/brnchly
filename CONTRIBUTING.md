@@ -41,7 +41,7 @@ npx playwright install chromium
 npm run test:smoke
 ```
 
-Run the broader `npm run test:e2e` when the change touches editor, playback, reduced motion, or application interactions. Performance profiling is non-gating and should follow `docs/performance.md`.
+Run the broader `npm run test:e2e` when the change touches editor, playback, reduced motion, or application interactions. Performance profiling is non-gating and should follow `docs/development.md`.
 
 ## Documentation
 

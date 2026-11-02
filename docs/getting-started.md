@@ -1,16 +1,15 @@
 # Getting started
 
-## Choose a package
+Use `@no0vie/brnchly-core` for schema, validation, migration, layout, traversal, routing, playback, and viewport math. Add `@no0vie/brnchly-react` for the interactive browser renderer.
 
-Use `@no0vie/brnchly-core` for data, validation, layout, traversal, playback, routing, or viewport math without React. Add `@no0vie/brnchly-react` when you need the interactive browser renderer. Package availability on npm is not yet verified in this phase.
+The repository is a v1.0 release candidate. Registry publication is not confirmed, so the commands below apply once the packages are published. Current contributors should use the workspace and distribution checks instead.
 
 ```sh
 npm install @no0vie/brnchly-core
-# React applications:
 npm install @no0vie/brnchly-react react react-dom
 ```
 
-Both packages are ESM-only, include declarations, and require Node.js 20+ for supported tooling/consumption. The React package accepts React/React DOM `>=18 <20`.
+Both packages are ESM-only and include TypeScript declarations. React and React DOM `>=18 <20` are peers of the React package.
 
 ## Create and validate a graph
 
@@ -38,7 +37,7 @@ export const graph: EvolutionGraph = {
 };
 
 const result = validateEvolutionGraph(graph);
-if (!result.valid) console.error(result.issues);
+if (!result.valid) throw new Error(result.issues.map((issue) => issue.message).join(" "));
 ```
 
 ## Render it
@@ -57,13 +56,11 @@ export function LearningPath() {
 }
 ```
 
-The `layout` prop is required. Import CSS once. The renderer is client-side browser UI; SSR/hydration is not a verified integration target.
+Import CSS once, pass the required `layout`, and provide enough container space. The renderer is browser UI; SSR markup and hydration are not supported claims.
 
-## Own your data
+Treat graph data, sets, selection, and camera values as immutable caller-owned inputs. Apply callback results to new state and pass that state back.
 
-Treat graphs, sets, selection, and camera values as immutable caller-owned inputs. Renderer edit callbacks are requests, not mutations. Construct a new graph/state value and pass it back. See [Renderer](renderer.md) and [Integration](integration.md).
-
-## Try the repository app
+## Run the repository app
 
 ```sh
 nvm use
@@ -71,4 +68,6 @@ npm ci
 npm run dev
 ```
 
-The demo includes Classic, Graph, and Editor modes. `UniversalEditor` is not exported from the published packages.
+The app includes Classic, Graph, and Editor modes. `UniversalEditor` and application playback controls are repository-only, not package exports.
+
+Next: [public API](api.md), [schema](graph-schema.md), and [editor](editor.md).

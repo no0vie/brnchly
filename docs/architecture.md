@@ -1,35 +1,54 @@
 # Architecture
 
-## Layers
+## Package boundaries
 
-1. **`@no0vie/brnchly-core`** — DOM-free schema and deterministic graph utilities. It has no React, storage, or application dependency.
-2. **`@no0vie/brnchly-react`** — browser renderer using core. React and React DOM are peers; Ant Design and the editor are not package dependencies.
-3. **Repository app** — demo, compatibility view, playback composition, performance harness, and `UniversalEditor` with local persistence.
+```text
+standalone application → @no0vie/brnchly-react → @no0vie/brnchly-core
+```
 
-Dependencies flow from app → React package → core. Core never imports upward.
+### Core
 
-## Ownership model
+`@no0vie/brnchly-core` owns EvolutionGraph types, validation, migrations, serialization, deterministic layout, traversal, routing, playback planning, and viewport math. It has no React, DOM, storage, or application dependency.
 
-The graph is caller-owned. Public core functions derive results or return migrated/parsed values; consumers should not rely on in-place mutation. `GraphRenderer` derives positions and visual state without writing into the input graph.
+Layout and camera are separate: layout returns positions, bounds, node size, and optional stage/lane regions; viewport utilities pan, zoom, fit, resize, and focus those results without invoking layout. HTML/SVG rendering and browser measurement do not enter core.
 
-Interaction outputs cross the boundary through callbacks:
+### React renderer
 
-- selection: `onSelectedNodeChange`;
-- camera: `onCameraChange`;
-- manual positions: `onNodePositionCommit`;
-- connections: `onConnectionCommit`;
-- layout choice: `onLayoutChange`.
+`@no0vie/brnchly-react` owns `GraphRenderer`, its public types, and the exported stylesheet. It projects core layout/routing results into SVG edges and HTML node cards, observes its container, handles pointer/camera interactions, and reports edit intent through callbacks.
 
-For controlled state, pass the latest value back through `selectedNodeId` or `camera`. For uncontrolled initialization, use `defaultSelectedNodeId` or `defaultCamera`; later default-prop changes do not reset user state.
+React and React DOM are peer dependencies. The package does not depend on Ant Design, MobX, persistence, or the editor.
 
-## Renderer composition
+### Standalone application
 
-`GraphRenderer` computes layout, routes SVG edges, and renders HTML node cards over the graph viewport. It observes container dimensions, handles pointer camera gestures, and exposes imperative focus/camera methods through a ref.
+The root application contains:
 
-## Editor boundary
+- Classic Mode and its legacy-data adapter;
+- Graph Mode and evolution playback composition;
+- `UniversalEditor`, command/history logic, and local persistence;
+- demo graphs and the deterministic performance harness.
 
-The editor command/history/persistence implementation remains application source. It is useful as an integration example but has no compatibility promise as a package API.
+These are integration examples and product UI, not public npm exports.
 
-## Runtime boundary
+## Data ownership
 
-Core source is checked to avoid DOM globals. The React package root is tested for module evaluation in the project test environment, but actual rendering requires browser APIs. No server-rendering or hydration guarantee is made.
+`EvolutionGraph` is the canonical serializable document. Public core operations derive results or return migrated/parsed values. `GraphRenderer` never writes into its `graph` prop.
+
+Interaction intent crosses the React boundary through callbacks for selection, camera, layout, node positions, and connections. Controlled owners must pass updated values back. `defaultSelectedNodeId` and `defaultCamera` initialize uncontrolled state only.
+
+The editor converts interaction requests into immutable graph commands, validates complete candidate graphs, and stores accepted before/after snapshots for bounded undo/redo. Compound operations are one transaction and one history entry. Rejected operations retain the prior graph.
+
+## Persistence boundary
+
+The application persistence service validates and serializes schema-v2 graphs before storing them in `localStorage`. Autosave and document lifecycle are editor concerns. History, selection, camera, drafts, collaboration, authentication, and server backup are not part of persisted graph data.
+
+## Rendering decisions
+
+The project uses deterministic in-repository layout plus HTML/SVG rendering. This keeps core testable and node controls accessible without adding a graph-framework runtime dependency. Camera state remains separate from layout so pan, zoom, resize, fit, and focus do not recompute graph geometry.
+
+React Flow/XYFlow was not adopted because its graph-state conventions and runtime dependency were unnecessary for the current boundary. D3 would introduce imperative integration for algorithms small enough to keep pure and tested. Canvas/WebGL could improve very-large-graph rendering but would complicate native controls, accessibility, and hit testing.
+
+Consequences include simple cubic edge routing, no node avoidance, predictable rather than globally optimized layout, no virtualization, and growing browser style/paint cost on large graphs. Revisit the rendering choice when measured requirements demand richer routing, substantially larger graphs, GPU rendering, or interaction behavior that the HTML/SVG model cannot support.
+
+## Public boundary
+
+Only package-root exports and `@no0vie/brnchly-react/styles.css` are public. Internal source paths, editor modules, app components, CSS implementation classes, and repository hooks have no compatibility guarantee.

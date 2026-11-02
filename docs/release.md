@@ -1,16 +1,16 @@
 # Release process
 
-## Versioning policy
+## Policy
 
-Published packages use semantic versioning and are released together while `@no0vie/brnchly-react` pins its core dependency.
+The two packages use semantic versioning and release together. `@no0vie/brnchly-react` currently pins the matching core version.
 
-- **Patch:** compatible fixes, documentation, and internal changes.
-- **Minor:** backward-compatible public API additions or deprecations.
-- **Major:** removed/renamed public exports, incompatible type/behavior changes, peer-range breaks, or incompatible persisted schema changes.
+- Patch: compatible fixes, documentation, and internal changes.
+- Minor: backward-compatible public API additions or deprecations.
+- Major: removed/renamed exports, incompatible behavior/type changes, peer-range breaks, or incompatible persisted-schema changes.
 
-The current manifests intentionally remain at the requested target `1.0.0`. They describe an unpublished v1 candidate artifact, not a completed npm release. Actual publication is approval-gated; do not change the target version or treat it as published until the protected workflow succeeds. Do not reuse the version after publication.
+The manifests target `1.0.0`, but that version remains a release candidate until publication is verified. Never reuse a version after successful publication.
 
-## Required checks
+## Required local checks
 
 ```sh
 nvm use
@@ -22,34 +22,40 @@ npm test
 npm run build
 npm run pack:dry-run
 npm run test:consumer
+npm run test:e2e
+npm audit
 npm audit --omit=dev
-npm run test:ci:e2e
+git diff --check
 ```
 
-Also review tarball contents, changelog, docs links, licenses, package versions/dependencies, and registry ownership/name availability.
+Also inspect tarball contents, package versions/dependencies, licenses, changelog, docs links, and source maps.
 
-## Registry verification
+## Registry preflight
 
-Before publishing, verify both scoped package names and access with the intended npm account:
+With the intended authorized account, verify identity, scope access, and target versions:
 
 ```sh
+npm whoami
 npm view @no0vie/brnchly-core name version
 npm view @no0vie/brnchly-react name version
-npm whoami
+npm view @no0vie/brnchly-core@1.0.0 version
+npm view @no0vie/brnchly-react@1.0.0 version
 ```
 
-A not-found response can indicate availability or missing access depending on scope visibility; confirm while authenticated. Unauthenticated lookups on 2026-10-29 returned `E404` for both package names, so neither was publicly visible from this environment. That result does not prove scoped-name availability or publish authority. Authenticated scope ownership and permission verification remains a release blocker.
+An `E404` does not by itself prove package-name availability or publish authority.
 
-## Manual publishing workflow
+## Protected publishing
 
-`.github/workflows/publish.yml` is `workflow_dispatch` only and fails unless dispatched from `main` or the exact release tag `v1.0.0`. It defaults to validation-only. Actual publishing requires explicitly setting `dry_run` to false and approval from the protected `npm` environment. The workflow requires that both manifests and React’s core dependency are exactly `1.0.0`, runs authenticated `npm whoami`, and refuses to continue unless `npm view` returns the expected unpublished `E404` for both target versions. It publishes core before React with public access and provenance.
+`.github/workflows/publish.yml` is manual and defaults to validation-only. For the current candidate it restricts refs and versions to the configured `1.0.0` policy, validates tests/packages/consumer installation, checks npm identity and unpublished target versions, requires the protected `npm` environment, and publishes core before React with provenance.
 
-Configure the protected `npm` environment with required reviewers and an `NPM_TOKEN` environment secret that can run the identity and registry preflights. Configure npm trusted publishing for this repository/environment before using provenance. Never publish from an unreviewed `main` commit or tag, and never make publishing automatic on push/tag. Confirm the workflow run, package versions, changelog, npm identity, and expected unpublished status before approving the environment. The `1.0.0` files remain an unpublished v1 candidate artifact until that approval-gated publish completes.
+Confirm whether the repository uses an npm automation token, trusted publishing/OIDC, or both as intentionally configured. Do not weaken unpublished-version checks without a documented recovery path. Publication is not atomic: if core succeeds and React fails, owner review is required before resuming.
 
-## Pages
+Do not make publishing automatic on push/tag. Do not publish, tag, or push without explicit owner approval.
 
-`.github/workflows/pages.yml` prepares the demo at `/brnchly/` on manual dispatch or `main` push and deploys through the `github-pages` environment. Configure repository Pages to use GitHub Actions. The workflow is prepared only; this document does not claim it has run or deployed.
+## GitHub Pages
+
+`.github/workflows/pages.yml` builds the app for `/brnchly/`, uploads `dist`, and deploys through the `github-pages` environment. Configure Pages to use GitHub Actions and verify the resulting URL before documenting a live demo. Workflow configuration is not proof of deployment.
 
 ## After release
 
-Verify registry metadata and a clean consumer install, create the corresponding Git tag/release notes, and move changelog entries from release-candidate wording only when facts support it. Do not produce a final Phase 5 RC report until all required external checks have evidence.
+Verify registry metadata, provenance, tarball contents, and a clean registry-based consumer install. Only then create/confirm release notes and update RC wording in README/changelog. Record actual CI, publication, and Pages results rather than inferring them from local checks.
